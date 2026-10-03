@@ -136,9 +136,50 @@ def normalize(spec, case):
             if t == "matrix" and isinstance(d, list) and d and all(isinstance(r, list) for r in d):
                 c["default"] = [[min(max(_num(v, lo), lo), hi) for v in r] for r in d]
                 c["rows"], c["cols"] = len(d), len(d[0])
+    _fix_set_values(s, fixes)
     if fixes:
         s.setdefault("_autofix", []).extend(fixes)
     return s, fixes
+
+
+def _fix_set_values(s, fixes):
+    """Explorations/self-tests often use a valid value just outside the declared range (fpr=0 when min=0.01)
+    or a too-short vector. Widen the range / pad the vector instead of paying for a repair."""
+    cmap = {c.get("id"): c for c in s.get("controls") or [] if isinstance(c, dict)}
+    for key in ("explorations", "self_tests"):
+        for it in s.get(key) or []:
+            st = it.get("set") if isinstance(it, dict) else None
+            if not isinstance(st, dict):
+                continue
+            for k, v in list(st.items()):
+                c = cmap.get(k)
+                if not c:
+                    continue
+                t = c.get("type")
+                if t == "toggle" and isinstance(v, str) and v.lower() in ("true", "false"):
+                    st[k] = v = v.lower() == "true"
+                if t in ("slider", "vector", "matrix") and isinstance(v, str) and _num(v) is not None:
+                    st[k] = v = _num(v)
+                if t == "vector" and isinstance(v, list) and isinstance(c.get("default"), list):
+                    n = len(c["default"])
+                    if 0 < len(v) < n and all(_num(x) is not None for x in v):
+                        pad = 0.0 if c["min"] <= 0 <= c["max"] else c["min"]
+                        st[k] = v = list(v) + [pad] * (n - len(v))
+                        fixes.append(f"{key} set.{k}: padded to length {n}")
+                nums = []
+                if t == "slider" and _num(v) is not None and not isinstance(v, bool):
+                    nums = [_num(v)]
+                elif t == "vector" and isinstance(v, list):
+                    nums = [_num(x) for x in v if _num(x) is not None]
+                elif t == "matrix" and isinstance(v, list):
+                    nums = [_num(x) for r in v if isinstance(r, list) for x in r if _num(x) is not None]
+                if nums:
+                    lo, hi = min(nums), max(nums)
+                    span = (c["max"] - c["min"]) or 1
+                    if lo < c["min"] and c["min"] - lo <= 2 * span:
+                        fixes.append(f"{k}: min {c['min']} -> {lo} (used in {key})"); c["min"] = lo
+                    if hi > c["max"] and hi - c["max"] <= 2 * span:
+                        fixes.append(f"{k}: max {c['max']} -> {hi} (used in {key})"); c["max"] = hi
 
 
 # ---------------------------------------------------------------------------
@@ -468,7 +509,11 @@ class CheckRun:
         if bad:
             self.add(F("c3_compute", f"compute(defaults) produced NaN/Infinity/undefined: {bad[:4]}", ["compute"]))
         if res.get("warning"):
-            self.add(F("c3_compute", f"compute(defaults) returned warning '{str(res['warning'])[:80]}'; defaults must be valid", ["compute", "controls"]))
+            declared_ok = not bad and all(isinstance(o, dict) and o.get("id") in res and res[o["id"]] is not None
+                                          for o in s.get("outputs") or [])
+            self.add(F("c3_compute", f"compute(defaults) returned warning '{str(res['warning'])[:80]}'; 'warning' is only for "
+                       f"invalid input, put informational text in 'insight'", ["compute", "controls"],
+                       "minor" if declared_ok else "major"))
         for o in s.get("outputs") or []:
             if not isinstance(o, dict) or "id" not in o:
                 continue
@@ -595,18 +640,24 @@ class CheckRun:
             if not _nonempty_str(e.get("expect")):
                 self.add(F("c7_explorations", f"{label}: add an 'assert' JS boolean expression", ["explorations"], "minor"))
                 res.append({"i": i + 1, "pass": None}); continue
+            same = False
+            inp, errs = apply_set(self.s, e.get("set") or {})
+            if not errs:
+                try:
+                    same = _close(_declared(self.sb.run(inp), self.s), self.base)
+                except JSError:
+                    pass
+            if same:
+                cur = {k: defaults(self.s).get(k) for k in (e.get("set") or {})}
+                self.add(F("c7_explorations", f"{label}: its 'set' {json.dumps(e.get('set'))[:120]} produces exactly the "
+                           f"default state (defaults: {json.dumps(cur)[:120]}), so the learner sees no change. Choose set "
+                           f"values that differ from the defaults and still show the effect, and keep the assert consistent.",
+                           ["explorations"]))
+                res.append({"i": i + 1, "pass": False}); continue
             ok, err = self._assert(label, e.get("set") or {}, e["expect"], ["explorations"])
             res.append({"i": i + 1, "pass": ok})
             if not ok:
                 self.add(F("c7_explorations", err, ["explorations"]))
-            # the exploration should actually change something versus the defaults
-            inp, errs = apply_set(self.s, e.get("set") or {})
-            if not errs:
-                try:
-                    if _close(_declared(self.sb.run(inp), self.s), self.base):
-                        self.add(F("c7_explorations", f"{label}: 'set' leaves all outputs equal to the defaults", ["explorations"], "minor"))
-                except JSError:
-                    pass
         self.stats["explorations"] = res
 
     # -- check 8: equation vs code

@@ -14,6 +14,8 @@ except Exception:  # pragma: no cover
 
 PRELUDE = r"""
 var approx = function(a, b, tol){ if (tol === undefined) tol = 1e-6;
+  if (typeof a === 'string' && a.trim() !== '' && isFinite(Number(a))) a = Number(a);
+  if (typeof b === 'string' && b.trim() !== '' && isFinite(Number(b))) b = Number(b);
   if (typeof a !== 'number' || typeof b !== 'number') return a === b;
   return Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b)); };
 var sum = function(a){ var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; };
