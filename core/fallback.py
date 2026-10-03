@@ -26,7 +26,10 @@ def sanitize(spec, report):
         if isinstance(e, dict):
             e["verified"] = bool(ex_res.get(i + 1))
             if ex_res.get(i + 1) is False:
-                notes.append(f"exploration {i+1} marked unverified")
+                # never let the page claim a result its own numbers contradict: drop the in-page check (no "⚠" line)
+                for k in ("expect", "assert", "check", "expected", "assertion"):
+                    e.pop(k, None)
+                notes.append(f"dropped expected-result check of exploration {i+1} (failed verification)")
 
     # drop outputs that are missing or malformed at defaults (renderer would choke)
     base = stats.get("_base_values")
