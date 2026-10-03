@@ -4,4 +4,4 @@ __pycache__/
 venv/
 .env
 .vscode/
-.ipynb_checkpoints/
+.ipynb_checkpoints/.DS_Store
