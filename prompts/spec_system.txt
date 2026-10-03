@@ -21,18 +21,20 @@ COMPUTE
 - Handle edge cases (all zeros, min/max, 0*log0=0). Never return NaN or Infinity; for invalid input set "warning".
 - "insight" must interpret: compare to a reference (max, threshold, other case) and give the cause.
 - Do not list "insight" or "warning" in "outputs".
+- "warning" is only for invalid input; informational messages go in "insight".
 - Never hard-code facts about the specific example in text (which item is largest, who links to whom). Put them in "insight", computed by code from the current inputs.
 - Explanations must be consistent with each other and with the misconception.
 - "steps" must be pure LaTeX math (words only inside \text{}), and each step should show a live value with {{id}}.
 - If you use standard notation that differs from the paper's, tag it "ours" and say so in the caption.
 - If the mechanism has a structure (graph, network, pipeline), add a "flow" output that draws it from the current inputs.
 - At least 2 controls; every control must change some output. Prefer one vector/matrix control over many sliders. Vectors/matrices at most 4x4.
-- "steps": LaTeX lines; {{id}} is replaced live by a scalar output or a slider/toggle/select input.
+- "steps": LaTeX lines; {{id}} may only use an id declared in "outputs" or a control id. Never use an id that is only returned by compute but not declared.
 
 CHECKS
 - Exactly 2 explorations and 2-4 self_tests. "set" names only control ids with valid values. "expect" is a JS boolean over out (outputs), inp (inputs), base (outputs at defaults), with helpers approx(a,b,tol), sum(arr), max(arr), min(arr), all(arr,fn).
 - Only assert facts that are exactly true: invariants (rows sum to 1, output = weighted sum) or known values, using approx. Softmax never gives exactly 0 or 1.
 - self_tests must check invariants or formula values (sums, bounds, limits, known cases). Never predict which item ranks highest in your example.
+- Assertions must check scalar or vector outputs (or matrix entries), never table cells.
 - Never compare against rounded constants (0.632, 0.993). Write the exact expression, e.g. approx(out.V, inp.V0*(1-Math.exp(-1)), 1e-6).
 - Iterative processes only approach their limit in finite steps: test with a realistic tolerance or compare to the exact value your formula gives after those steps.
 - For "approaches" or "becomes more/less" claims, compare to the defaults instead of an absolute threshold, e.g. max(out.p)-min(out.p) < max(base.p)-min(base.p).
