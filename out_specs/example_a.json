@@ -1,0 +1,310 @@
+{
+  "title": "Scaled Dot-Product Attention",
+  "paper": {
+    "name": "Attention Is All You Need",
+    "section": "3.2.1",
+    "equation": "1"
+  },
+  "hook": "Attention lets a model decide which parts of the input to focus on. Scaled dot-product attention computes similarity between queries and keys, turns those similarities into weights, and uses them to mix values. This page lets you edit Q, K, and V and see exactly how the output is built.",
+  "symbols": [
+    {
+      "tex": "Q",
+      "meaning": "Query matrix: one row per query, one column per feature."
+    },
+    {
+      "tex": "K",
+      "meaning": "Key matrix: one row per key, one column per feature."
+    },
+    {
+      "tex": "V",
+      "meaning": "Value matrix: one row per key, one column per output feature."
+    },
+    {
+      "tex": "d_k",
+      "meaning": "Number of columns in Q and K (feature dimension)."
+    },
+    {
+      "tex": "S",
+      "meaning": "Raw similarity scores: S = Q K^T."
+    },
+    {
+      "tex": "A",
+      "meaning": "Attention weights after softmax, one row per query."
+    },
+    {
+      "tex": "O",
+      "meaning": "Output matrix: weighted sum of V rows."
+    }
+  ],
+  "equation": {
+    "tex": "\\mathrm{Attention}(Q,K,V) = \\mathrm{softmax}\\!\\left(\\frac{QK^\\top}{\\sqrt{d_k}}\\right)V",
+    "source": "paper"
+  },
+  "controls": [
+    {
+      "id": "Q",
+      "type": "matrix",
+      "label": "Query matrix Q",
+      "default": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "K",
+      "type": "matrix",
+      "label": "Key matrix K",
+      "default": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "V",
+      "type": "matrix",
+      "label": "Value matrix V",
+      "default": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "scale",
+      "type": "toggle",
+      "label": "Divide scores by sqrt(d_k)",
+      "default": true
+    }
+  ],
+  "compute": "function compute(x){\n  const Q = x.Q, K = x.K, V = x.V;\n  const n = Q.length, dk = Q[0].length, m = K.length, dv = V[0].length;\n  // scores S = Q K^T\n  const S = [];\n  for(let i=0;i<n;i++){\n    S.push([]);\n    for(let j=0;j<m;j++){\n      let s=0;\n      for(let t=0;t<dk;t++) s += Q[i][t]*K[j][t];\n      S[i].push(s);\n    }\n  }\n  const denom = x.scale ? Math.sqrt(dk) : 1;\n  const Sscaled = S.map(row => row.map(v => v/denom));\n  // softmax each row\n  const A = Sscaled.map(row => {\n    const mx = Math.max(...row);\n    const ex = row.map(v => Math.exp(v-mx));\n    const sum = ex.reduce((a,b)=>a+b,0);\n    return ex.map(v => v/sum);\n  });\n  // output O = A V\n  const O = [];\n  for(let i=0;i<n;i++){\n    O.push([]);\n    for(let j=0;j<dv;j++){\n      let s=0;\n      for(let t=0;t<m;t++) s += A[i][t]*V[t][j];\n      O[i].push(s);\n    }\n  }\n  const rowSums = A.map(r => r.reduce((a,b)=>a+b,0));\n  const maxRowSumErr = Math.max(...rowSums.map(s => Math.abs(s-1)));\n  const insight = `Each row of A sums to 1 (max error ${maxRowSumErr.toExponential(2)}). Output O is the weighted sum of V rows.`;\n  return {\n    S: {type:'matrix', value:S, rowLabels:Q.map((_,i)=>'q'+i), colLabels:K.map((_,j)=>'k'+j), label:'Raw scores S = Q K^T'},\n    Sscaled: {type:'matrix', value:Sscaled, rowLabels:Q.map((_,i)=>'q'+i), colLabels:K.map((_,j)=>'k'+j), label:'Scaled scores'},\n    A: {type:'matrix', value:A, rowLabels:Q.map((_,i)=>'q'+i), colLabels:K.map((_,j)=>'k'+j), label:'Attention weights A'},\n    O: {type:'matrix', value:O, rowLabels:Q.map((_,i)=>'q'+i), colLabels:V[0].map((_,j)=>'v'+j), label:'Output O = A V'},\n    rowSums: {type:'vector', value:rowSums, labels:Q.map((_,i)=>'q'+i), label:'Row sums of A'},\n    insight: {type:'scalar', value:maxRowSumErr, label:'Max |row sum - 1|'}\n  };\n}",
+  "steps": [
+    {
+      "tex": "S = Q K^\\top",
+      "explain": "Compute similarity between each query and each key."
+    },
+    {
+      "tex": "S' = S / \\sqrt{d_k}",
+      "explain": "Scale down scores so softmax does not saturate."
+    },
+    {
+      "tex": "A = \\mathrm{softmax}(S')",
+      "explain": "Turn each row of scores into a probability distribution."
+    },
+    {
+      "tex": "O = A V",
+      "explain": "Each output row is a weighted average of the value rows."
+    }
+  ],
+  "explorations": [
+    {
+      "title": "Equal scores give uniform attention",
+      "predict": "If all keys are identical, what will each row of A look like?",
+      "set": {
+        "Q": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "K": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "V": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "scale": true
+      },
+      "observe": "Each row of A becomes [0.5, 0.5].",
+      "why": "When all scores in a row are equal, softmax gives equal weights.",
+      "expect": "Math.abs(o.A.value[0][0]-0.5)<1e-6 && Math.abs(o.A.value[0][1]-0.5)<1e-6"
+    },
+    {
+      "title": "Dominant score focuses attention",
+      "predict": "If one key is much more similar to the query, what happens to its weight?",
+      "set": {
+        "Q": [
+          [
+            2,
+            0
+          ]
+        ],
+        "K": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "V": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "scale": true
+      },
+      "observe": "The first weight is close to 1, the second close to 0.",
+      "why": "A much larger score dominates the softmax.",
+      "expect": "o.A.value[0][0] > 0.9"
+    }
+  ],
+  "limitation": "This page shows one attention head on tiny matrices. Real Transformers use many heads, multiple layers, and much larger dimensions.",
+  "misconception": "Attention weights are not the same as the output. The output is a weighted sum of the value rows, so it can be different from the weights.",
+  "claims": [
+    {
+      "text": "Scaled dot-product attention computes softmax(QK^T / sqrt(d_k)) V.",
+      "source": "paper"
+    },
+    {
+      "text": "Each row of the attention weight matrix sums to 1.",
+      "source": "ours"
+    },
+    {
+      "text": "The output is a weighted sum of the value rows.",
+      "source": "ours"
+    }
+  ],
+  "selftests": [
+    {
+      "set": {
+        "Q": [
+          [
+            1,
+            0
+          ]
+        ],
+        "K": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "V": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "scale": true
+      },
+      "assert": "Math.abs(o.rowSums.value[0]-1)<1e-6",
+      "why": "Softmax always produces rows that sum to 1."
+    },
+    {
+      "set": {
+        "Q": [
+          [
+            1,
+            0
+          ]
+        ],
+        "K": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "V": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "scale": true
+      },
+      "assert": "Math.abs(o.O.value[0][0] - (o.A.value[0][0]*1 + o.A.value[0][1]*0))<1e-6",
+      "why": "Output equals the weighted sum of V rows."
+    },
+    {
+      "set": {
+        "Q": [
+          [
+            1,
+            0
+          ]
+        ],
+        "K": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "V": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "scale": false
+      },
+      "assert": "Math.abs(o.Sscaled.value[0][0] - o.S.value[0][0])<1e-6",
+      "why": "With scaling off, scaled scores equal raw scores."
+    }
+  ]
+}

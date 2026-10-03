@@ -1,0 +1,182 @@
+{
+  "title": "Shannon Entropy: Measuring Uncertainty",
+  "paper": {
+    "name": "A Mathematical Theory of Communication",
+    "section": "6",
+    "equation": null
+  },
+  "hook": "Entropy quantifies the average surprise or uncertainty in a random variable. It tells us how many bits are needed on average to encode outcomes. Understanding entropy is key to data compression and communication limits.",
+  "symbols": [
+    {
+      "tex": "H",
+      "meaning": "Entropy in bits"
+    },
+    {
+      "tex": "p_i",
+      "meaning": "Probability of outcome i"
+    },
+    {
+      "tex": "n",
+      "meaning": "Number of possible outcomes"
+    },
+    {
+      "tex": "\\log_2",
+      "meaning": "Logarithm base 2"
+    }
+  ],
+  "equation": {
+    "tex": "H = -\\sum_{i=1}^{n} p_i \\log_2 p_i",
+    "source": "paper"
+  },
+  "controls": [
+    {
+      "id": "n",
+      "type": "slider",
+      "label": "Number of outcomes (n)",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 2
+    },
+    {
+      "id": "p1",
+      "type": "slider",
+      "label": "Probability of outcome 1 (p\u2081)",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "default": 0.5
+    },
+    {
+      "id": "p2",
+      "type": "slider",
+      "label": "Probability of outcome 2 (p\u2082)",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "default": 0.5
+    },
+    {
+      "id": "p3",
+      "type": "slider",
+      "label": "Probability of outcome 3 (p\u2083)",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "default": 0
+    },
+    {
+      "id": "p4",
+      "type": "slider",
+      "label": "Probability of outcome 4 (p\u2084)",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "default": 0
+    }
+  ],
+  "compute": "function compute(x) {\n  const n = Math.round(x.n);\n  let probs = [x.p1, x.p2, x.p3, x.p4].slice(0, n);\n  let sum = probs.reduce((a, b) => a + b, 0);\n  if (sum === 0) {\n    probs = probs.map(() => 1 / n);\n  } else {\n    probs = probs.map(p => p / sum);\n  }\n  const contributions = probs.map(p => {\n    if (p === 0) return 0;\n    return -p * Math.log2(p);\n  });\n  const H = contributions.reduce((a, b) => a + b, 0);\n  const insight = `With n=${n}, the entropy is ${H.toFixed(3)} bits.`;\n  return {\n    H: { type: 'scalar', value: H, label: 'Entropy (bits)' },\n    probs: { type: 'vector', value: probs, labels: probs.map((_, i) => `p${i+1}`) },\n    contributions: { type: 'vector', value: contributions, labels: contributions.map((_, i) => `-p${i+1} log2 p${i+1}`) },\n    insight: insight\n  };\n}",
+  "steps": [
+    {
+      "tex": "H = -\\sum_{i=1}^{n} p_i \\log_2 p_i",
+      "explain": "Entropy is the negative sum of each probability times its base-2 logarithm."
+    },
+    {
+      "tex": "0 \\log_2 0 = 0",
+      "explain": "By convention, zero probability contributes nothing to entropy."
+    },
+    {
+      "tex": "H = 0 \\text{ when one } p_i = 1",
+      "explain": "If an outcome is certain, there is no uncertainty, so entropy is zero."
+    },
+    {
+      "tex": "H = \\log_2 n \\text{ when all } p_i = 1/n",
+      "explain": "For equally likely outcomes, entropy is maximized and equals log2(n)."
+    }
+  ],
+  "explorations": [
+    {
+      "title": "Certainty gives zero entropy",
+      "predict": "Set n=2, p\u2081=1, p\u2082=0. What is the entropy?",
+      "set": {
+        "n": 2,
+        "p1": 1,
+        "p2": 0,
+        "p3": 0,
+        "p4": 0
+      },
+      "observe": "The entropy H is 0 bits.",
+      "why": "When one outcome is certain, there is no uncertainty, so entropy is zero.",
+      "expect": "o.H.value < 1e-9"
+    },
+    {
+      "title": "Four equally likely outcomes give two bits",
+      "predict": "Set n=4, all probabilities equal to 0.25. What is the entropy?",
+      "set": {
+        "n": 4,
+        "p1": 0.25,
+        "p2": 0.25,
+        "p3": 0.25,
+        "p4": 0.25
+      },
+      "observe": "The entropy H is 2 bits.",
+      "why": "For four equally likely outcomes, entropy is log2(4) = 2 bits.",
+      "expect": "Math.abs(o.H.value - 2) < 1e-9"
+    }
+  ],
+  "limitation": "This demonstration assumes independent outcomes and uses a small number of outcomes. Real-world distributions may have many outcomes and dependencies.",
+  "misconception": "Entropy is not the same as the number of outcomes; it depends on their probabilities. A distribution with many outcomes but one very likely outcome can have low entropy.",
+  "claims": [
+    {
+      "text": "Entropy is defined as H = -\u2211 p_i log2 p_i.",
+      "source": "paper"
+    },
+    {
+      "text": "0 log 0 = 0 by convention.",
+      "source": "paper"
+    },
+    {
+      "text": "Entropy is zero when one outcome has probability 1.",
+      "source": "paper"
+    },
+    {
+      "text": "Entropy is maximized when all outcomes are equally likely.",
+      "source": "paper"
+    }
+  ],
+  "selftests": [
+    {
+      "set": {
+        "n": 2,
+        "p1": 0.5,
+        "p2": 0.5,
+        "p3": 0,
+        "p4": 0
+      },
+      "assert": "Math.abs(o.H.value - 1) < 1e-9",
+      "why": "Two equally likely outcomes give 1 bit of entropy."
+    },
+    {
+      "set": {
+        "n": 3,
+        "p1": 1,
+        "p2": 0,
+        "p3": 0,
+        "p4": 0
+      },
+      "assert": "o.H.value < 1e-9",
+      "why": "Certainty (one outcome with probability 1) gives zero entropy."
+    },
+    {
+      "set": {
+        "n": 4,
+        "p1": 0.5,
+        "p2": 0.5,
+        "p3": 0,
+        "p4": 0
+      },
+      "assert": "Math.abs(o.H.value - 1) < 1e-9",
+      "why": "Zero probabilities do not affect entropy; this is equivalent to two equally likely outcomes."
+    }
+  ]
+}

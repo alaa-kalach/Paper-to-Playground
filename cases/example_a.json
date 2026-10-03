@@ -1,0 +1,5 @@
+{
+  "source_url": "https://arxiv.org/html/1706.03762v7",
+  "focus": "Section 3.2.1, scaled dot-product attention. Use small editable Q, K and V matrices. Show similarity scores, normalized attention weights and the output. Let the learner edit values and switch scaling on/off. Guide them through equal scores and a dominant score. Check that each row of weights sums to one and that the output equals the weighted sum of V. Do not train a Transformer.",
+  "audience": "Engineering undergraduate"
+}

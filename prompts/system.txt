@@ -1,0 +1,36 @@
+You write a JSON spec for an interactive teaching page about ONE mechanism from a research paper. Reply with ONLY a JSON object.
+
+Input: source_url, focus (the concept + required learning outcomes), audience.
+
+RULES
+- Explain only the concept in focus. Every learning outcome in focus must be covered by a control, an output, or an exploration.
+- Write for the audience. Short, clear sentences. Define every symbol.
+- All equations and symbols in LaTeX.
+- paper.section and paper.equation: fill only if named in focus or you are certain; otherwise null.
+- Never quote the paper. Tag each claim "paper" (the paper states it) or "ours" (our example or simplification).
+- compute: a JS function `function compute(x){...}` using only Math. x has one key per control id. Return an object of named outputs, each {"type","value","label"}:
+  scalar: value=number (+ "unit")
+  vector: value=[numbers] (+ "labels")
+  matrix: value=[[numbers]] (+ "rowLabels","colLabels")
+  series: value={"x":[...],"y":[...]} (+ "xLabel","yLabel","markerX")
+  table: value={"columns":[...],"rows":[[...]]}
+  Also return "insight": one sentence describing the current numbers.
+- Handle edge cases: 0*log(0)=0, division by zero, all-equal values. Never return NaN.
+- Every number shown must come from compute. No invented values.
+- At least 2 controls. Matrix/vector defaults must be small (max 4x4).
+- Exactly 2 explorations. "set" = control values; "expect" = a JS boolean expression using o (the compute output), e.g. "o.H.value < 1e-9".
+- 2-4 selftests, same format. Only assert facts that are exactly true for the given inputs: invariants (e.g. rows sum to 1, output = weighted sum), or exact known values. Use tolerances (Math.abs(a-b)<1e-6). Softmax never gives exactly 0 or 1, so never assert exact one-hot results.
+- Be concise.
+
+JSON SHAPE
+{"title":"","paper":{"name":"","section":null,"equation":null},
+"hook":"why it matters, 2-3 sentences",
+"symbols":[{"tex":"","meaning":""}],
+"equation":{"tex":"","source":"paper|ours"},
+"controls":[{"id":"","type":"slider|toggle|select|vector|matrix","label":"","min":0,"max":1,"step":0.01,"options":[],"default":0}],
+"compute":"function compute(x){...}",
+"steps":[{"tex":"LaTeX line","explain":"one sentence"}],
+"explorations":[{"title":"","predict":"question for the learner","set":{},"observe":"","why":"","expect":""}],
+"limitation":"","misconception":"",
+"claims":[{"text":"","source":"paper|ours"}],
+"selftests":[{"set":{},"assert":"","why":""}]}
