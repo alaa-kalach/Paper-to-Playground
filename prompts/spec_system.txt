@@ -51,7 +51,7 @@ CHECKS
 - Iterative processes only approach their limit in finite steps: test with a realistic tolerance or compare to the exact value your formula gives after those steps.
 - For "approaches" or "becomes more/less" claims, compare to the defaults instead of an absolute threshold, e.g. max(out.p)-min(out.p) < max(base.p)-min(base.p).
 - For threshold expectations (e.g. weight > 0.9), pick extreme "set" values so the effect is clear: work out the number first; for softmax, make the score gap at least 5.
-- Be concise.
+
 
 JSON SHAPE
 {"title":"","paper":{"title":"","authors":null,"year":null,"url":"","section":null,"equation":null},
