@@ -29,6 +29,10 @@ COMPUTE
 - If the mechanism has a structure (graph, network, pipeline), add a "flow" output that draws it from the current inputs.
 - At least 2 controls; every control must change some output. Prefer one vector/matrix control over many sliders. Vectors/matrices at most 4x4.
 - "steps": LaTeX lines; {{id}} may only use an id declared in "outputs" or a control id. Never use an id that is only returned by compute but not declared.
+- Every {{id}} in steps must be a value that compute actually returns or a control id. A vector {{id}} is shown as [a, b, ...] automatically, so do not write brackets around it.
+- "insight" must handle ties and equal values naturally (e.g. "all pages have equal rank 0.25").
+- equation.source = "paper" only if the paper writes it in this exact form; if the notation differs at all, use "ours" and say "standard modern form of the paper's equation".
+- In "flow" outputs, label edges only with informative values (e.g. transition probability 1/L_j); leave the label empty otherwise.
 
 CHECKS
 - Exactly 2 explorations and 2-4 self_tests. "set" names only control ids with valid values. "expect" is a JS boolean over out (outputs), inp (inputs), base (outputs at defaults), with helpers approx(a,b,tol), sum(arr), max(arr), min(arr), all(arr,fn).
