@@ -4,4 +4,7 @@ __pycache__/
 venv/
 .env
 .vscode/
-.ipynb_checkpoints/
+.ipynb_checkpoints/out_test/
+preview/
+.DS_Store
+.venv/
