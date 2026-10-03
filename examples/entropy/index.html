@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discrete Entropy: Measuring Uncertainty in Bits</title>
+<style>
+/* Lecture-handout design: engineering-pad paper by day, chalkboard by night.
+   One memorable device: live numbers are marked with a highlighter. */
+:root{
+  --bg:#F4F3F1; --card:#FFFFFF; --ink:#1E1A1C; --muted:#5E5458; --line:#D9CFD3; --grid:#EADFE3;
+  --accent:#840132; --accent-deep:#5E0024; --band-a:#5E0024; --band-b:#840132; --accent-soft:#F6E4EB; --accent-ink:#FFFFFF;
+  --paper:#2F6B3F; --paper-soft:#E3EFE6; --ours:#8A5A00; --ours-soft:#F6ECD6;
+  --warn:#840132; --warn-soft:#F6E4EB; --ok:#2F6B3F;
+  --bar:#840132; --bar2:#C48A12; --hl:#F7DF6B;
+  --heat:132,1,50; --heat-neg:31,63,120;
+  --serif:"Palatino Linotype",Palatino,"Book Antiqua","URW Palladio L","TeX Gyre Pagella",Georgia,serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1A1315; --card:#241A1D; --ink:#F1E9EC; --muted:#BCA9B0; --line:#45333A; --grid:#2F2226;
+    --accent:#E46A93; --accent-deep:#F4B3C8; --band-a:#4A001C; --band-b:#840132; --accent-soft:#3A2129; --accent-ink:#1A1315;
+    --paper:#9FD3AE; --paper-soft:#233A2B; --ours:#E8C97A; --ours-soft:#3B3222;
+    --warn:#F08AAA; --warn-soft:#3A2129; --ok:#9FD3AE;
+    --bar:#E46A93; --bar2:#E8C25A; --hl:rgba(232,194,90,.42);
+    --heat:228,106,147; --heat-neg:120,160,230;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{overflow-x:clip;margin:0;background:var(--bg);color:var(--ink);font:18px/1.62 var(--serif);font-variant-numeric:oldstyle-nums;overflow-wrap:break-word}
+main{max-width:1060px;margin:0 auto;padding:40px 20px 72px;counter-reset:sec}
+p{margin:.45em 0}
+a{color:var(--accent);overflow-wrap:anywhere}
+.hidden{display:none!important}
+sub,sup{font-size:.72em;line-height:0}
+.ovl{text-decoration:overline;text-decoration-thickness:1px}
+.meta{color:var(--muted);font-size:.9rem}
+
+/* ---- title block: a burgundy cover band, like the head of a printed handout ---- */
+header{margin:-40px calc(50% - 50vw) 8px;padding:34px 20px 30px;background:var(--band-b);background:linear-gradient(180deg,var(--band-a),var(--band-b));color:#FFF}
+header > *{max-width:760px;margin-left:auto;margin-right:auto}
+.handout{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-variant:small-caps;letter-spacing:.06em;color:rgba(255,255,255,.82);font-size:.95rem;border-bottom:3px double rgba(255,255,255,.45);padding-bottom:6px}
+.chip{font-variant:small-caps}
+h1{font-weight:400;font-size:2.65rem;line-height:1.13;margin-top:.5em;margin-bottom:.15em;letter-spacing:-.005em;color:#FFF}
+#hdr-meta{font-style:italic;color:rgba(255,255,255,.85);display:block}
+#hdr-meta .chip{display:none}
+.hook{font-size:1.06rem;margin-top:1.1em;text-align:justify;hyphens:auto;color:#FFF}
+.hook::before{content:"Abstract. ";font-weight:700;font-style:normal}
+.hook math{color:#FFF}
+.disclaimer{font-size:.86rem;color:rgba(255,255,255,.85);font-style:italic;margin-top:1em;padding-left:1em;border-left:2px solid rgba(255,255,255,.5)}
+.disclaimer strong{font-style:normal}
+.disclaimer .badge.paper,.disclaimer .badge.ours{background:rgba(255,255,255,.16);color:#FFF}
+
+/* ---- sections: no boxes, numbered like a lecture ---- */
+section.card{max-width:760px;margin:3.1rem auto 0;counter-increment:sec}
+section.card#sec-pg{max-width:none}
+h2{font-size:1.4rem;font-weight:600;font-variant:small-caps;letter-spacing:.03em;margin:0 0 .75em;padding-bottom:.25em;border-bottom:2px solid var(--accent);display:flex;align-items:baseline;gap:.55em;flex-wrap:wrap;color:var(--accent-deep)}
+h2::before{content:"\00A7" counter(sec);font-variant:normal;font-weight:700;color:var(--accent)}
+h2 .num{display:none}
+h3{font-size:1.02rem;margin:0 0 .35em}
+
+.badge{display:inline-block;font-size:.78rem;font-style:italic;font-weight:400;padding:0 .45em;border-radius:3px;vertical-align:.1em;white-space:nowrap;font-variant:normal}
+.badge.paper{background:var(--paper-soft);color:var(--paper)}
+.badge.ours{background:var(--ours-soft);color:var(--ours)}
+
+table.sym{border-collapse:collapse;width:100%}
+table.sym td{padding:6px 12px 6px 0;vertical-align:baseline;border-bottom:1px dotted var(--line)}
+table.sym td:first-child{width:1%;white-space:nowrap;font-size:1.12rem;padding-right:22px;color:var(--accent-deep)}
+
+/* equation set like a textbook display, numbered (1) */
+.eq{position:relative;font-size:1.5rem;overflow-x:auto;padding:18px 56px 18px 8px;text-align:center;background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.eq::after{content:"(1)";position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:1.05rem;color:var(--accent)}
+math{font-size:1.04em}
+.eq math{font-size:1.12em}
+.tex-fallback{font-family:var(--mono);font-size:.85em;background:var(--grid);padding:.1em .35em;border-radius:3px}
+#eq-note{font-style:italic}
+
+/* ---- the playground is a figure plate on engineering-pad paper ---- */
+#sec-pg > .meta{max-width:760px;margin:0 auto .9em;font-style:italic}
+#sec-pg > h2{max-width:760px;margin-left:auto;margin-right:auto}
+.pg{display:grid;grid-template-columns:minmax(250px,310px) 1fr;gap:22px;align-items:start;padding:22px;border:2px solid var(--accent);border-radius:4px;
+  background-color:var(--card);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px;background-position:-1px -1px}
+@media (max-width:820px){.pg{grid-template-columns:1fr;padding:14px}}
+.controls{position:sticky;top:14px;display:flex;flex-direction:column;gap:12px}
+@media (max-width:820px){.controls{position:static}}
+.ctl{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 12px;transition:box-shadow .3s,border-color .3s}
+.ctl.flash{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.ctl label.top{display:flex;justify-content:space-between;gap:8px;font-weight:600;font-size:.95rem;margin-bottom:4px}
+.ctl .help{color:var(--muted);font-size:.84rem;font-style:italic;margin-top:4px}
+.ctl .val{color:var(--accent);font-weight:700;font-variant-numeric:lining-nums tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0}
+input[type=number]{width:100%;min-width:0;font:inherit;font-size:.9rem;font-variant-numeric:lining-nums tabular-nums;padding:3px 6px;border:1px solid var(--line);border-radius:3px;background:var(--bg);color:var(--ink)}
+input[type=number]:focus,select:focus,button:focus-visible,input[type=range]:focus-visible,.switch input:focus-visible+.track{outline:2px solid var(--accent);outline-offset:2px}
+select{width:100%;font:inherit;font-size:.95rem;padding:5px 8px;border:1px solid var(--line);border-radius:3px;background:var(--bg);color:var(--ink)}
+.vrow{display:grid;grid-template-columns:auto 1fr 70px;gap:8px;align-items:center;margin:2px 0}
+.vrow.off{opacity:.36}
+.vrow.off input{cursor:not-allowed}
+.vrow .lab,.mgrid .lab{font-style:italic;font-size:.88rem;color:var(--muted);min-width:2em}
+.mgrid{display:grid;gap:4px;align-items:center}
+.mgrid .lab{text-align:center}
+.switch{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:.95rem}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch .track{width:40px;height:22px;border-radius:11px;background:var(--line);position:relative;flex:none;transition:background .2s}
+.switch .track::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s}
+.switch input:checked+.track{background:var(--accent)}
+.switch input:checked+.track::after{left:21px}
+.outs{display:flex;flex-direction:column;gap:14px;min-width:0}
+.scalars{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.scalar{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:4px;padding:8px 12px}
+.scalar .k{font-size:.85rem;font-style:italic;color:var(--muted);line-height:1.3}
+.scalar .v{font-size:1.6rem;font-variant-numeric:lining-nums tabular-nums;color:var(--accent-deep)}
+.scalar .u{font-size:.9rem;color:var(--muted);margin-left:.3em;font-style:italic}
+.gauge{height:4px;background:var(--grid);margin-top:6px;overflow:hidden}
+.gauge i{display:block;height:100%;background:var(--accent);transition:width .15s}
+.vis{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 14px;min-width:0;counter-increment:fig}
+.outs{counter-reset:fig}
+.vis h3{font-weight:400;font-size:.95rem;display:block}
+.vis h3::before{content:"Fig. " counter(sec) "." counter(fig) "  ";font-weight:700;white-space:pre;color:var(--accent)}
+.vis .cap{color:var(--muted);font-size:.86rem;font-style:italic;margin:-.2em 0 .4em}
+.vis svg{width:100%;height:auto;display:block;overflow:visible}
+.vis canvas{width:100%;height:auto;display:block}
+svg text{fill:var(--ink);font-family:var(--serif);font-variant-numeric:lining-nums}
+svg .muted{fill:var(--muted)}
+svg .gridl{stroke:var(--grid)}
+svg .axis{stroke:var(--muted)}
+.tblwrap{overflow-x:auto}
+table.data{border-collapse:collapse;font-size:.92rem;width:100%;font-variant-numeric:lining-nums tabular-nums}
+table.data th,table.data td{padding:4px 10px;text-align:right}
+table.data thead th{border-top:1.5px solid var(--ink);border-bottom:1px solid var(--ink);font-weight:600}
+table.data tbody tr:last-child td{border-bottom:1.5px solid var(--ink)}
+table.data td:first-child,table.data th:first-child{text-align:left}
+.insight{background:var(--accent-soft);border-left:4px solid var(--accent);padding:9px 14px;font-style:italic}
+.insight::before{content:"Reading the figure. ";font-weight:700;font-style:normal;color:var(--accent)}
+.err{background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:8px 14px;font-size:.92rem;display:none}
+
+/* ---- worked steps with the highlighter ---- */
+.steps ol{margin:0;padding-left:0;list-style:none;counter-reset:st}
+.steps li{counter-increment:st;display:grid;grid-template-columns:3.2em 1fr;padding:9px 0;border-bottom:1px dotted var(--line);overflow-x:auto}
+.steps li::before{content:"(" counter(st, lower-alpha) ")";color:var(--muted);font-style:italic}
+.steps li > *{grid-column:2}
+.steps li:last-child{border-bottom:0}
+.steps li math{font-size:1.16em}
+.steps .note{color:var(--muted);font-size:.88rem;font-style:italic}
+mn.live,b.live{color:var(--ink);font-weight:700;background:linear-gradient(transparent 38%,var(--hl) 38%,var(--hl) 92%,transparent 92%);padding:0 .12em;transition:background-size .2s}
+
+/* ---- exercises ---- */
+.explore{display:flex;flex-direction:column;gap:16px}
+.ex{border-left:4px solid var(--accent);background:var(--card);padding:12px 16px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 0 var(--line)}
+.ex h3{font-size:1.08rem;color:var(--accent-deep)}
+.ex .lbl{font-weight:700;font-style:italic;font-size:.95rem;margin-top:2px;color:var(--accent)}
+.ex .lbl + div{margin-top:-2px}
+.ex .reveal{display:none;flex-direction:column;gap:6px;border-top:1px dotted var(--line);padding-top:8px;margin-top:4px}
+.ex.done .reveal{display:flex}
+.ex .set{font-size:.9rem;font-variant-numeric:lining-nums;background:var(--bg);padding:6px 10px;border-radius:3px;word-break:break-word}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+button{font:inherit;font-size:.95rem;border-radius:3px;padding:5px 16px;cursor:pointer;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+button.ghost{background:transparent;color:var(--accent)}
+.check{font-size:.92rem;font-weight:600}
+.check.ok{color:var(--ok)} .check.bad{color:var(--warn)}
+
+/* ---- remark and the red-pen correction ---- */
+.twocol{display:flex;flex-direction:column;gap:18px}
+.callout{padding:2px 0 2px 16px}
+.callout h3{display:inline;font-style:italic;font-size:1rem}
+.callout h3 + div{display:inline}
+.callout.lim{border-left:2px solid var(--line)}
+.callout.lim h3::after,.callout.mis h3::after{content:". "}
+.callout.mis{border-left:3px solid var(--warn)}
+.callout.mis h3{color:var(--warn)}
+
+/* ---- learning goals, the idea, takeaways ---- */
+ol.goals{margin:0;padding-left:1.4em}
+ol.goals li{padding:4px 0}
+ol.goals .via{display:block;color:var(--muted);font-size:.86rem;font-style:italic}
+#sec-idea p{margin:.5em 0}
+#context{font-style:italic;color:var(--muted)}
+ul.takeaways{margin:0;padding-left:0;list-style:none}
+ul.takeaways li{padding:6px 0 6px 1.4em;position:relative;border-bottom:1px dotted var(--line)}
+ul.takeaways li:last-child{border-bottom:0}
+ul.takeaways li::before{content:"";position:absolute;left:.2em;top:.95em;width:.5em;height:.5em;background:var(--accent);transform:rotate(45deg)}
+details.allvals{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:6px 14px}
+details.allvals summary{cursor:pointer;font-weight:600;color:var(--accent)}
+details.allvals table{margin-top:6px}
+.symsrc{margin-left:.5em}
+#verif .ok{color:var(--ok);font-weight:600}
+
+/* ---- references and claims, set like footnotes ---- */
+#source p{margin:.2em 0}
+ul.claims{padding-left:0;list-style:none;margin:0;font-size:.95rem}
+ul.claims li{padding:5px 0;display:grid;grid-template-columns:7.5em 1fr;gap:10px;align-items:baseline;border-bottom:1px dotted var(--line)}
+ul.claims li:last-child{border-bottom:0}
+.tests{padding-left:1.2em;margin:.3em 0}
+.tests li{font-size:.92rem}
+#tests-wrap h3,#sec-src h3{font-variant:small-caps;letter-spacing:.03em;font-weight:600}
+footer{max-width:760px;margin:3rem auto 0;color:var(--muted);font-size:.84rem;font-style:italic;text-align:center;border-top:3px double var(--accent);padding-top:10px}
+@media (max-width:600px){body{font-size:17px} h1{font-size:2rem} ul.claims li{grid-template-columns:1fr;gap:2px}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main id="app">
+  <header>
+    <div class="handout"><span>Interactive lecture note</span><span id="aud"></span></div>
+    <h1 id="title"></h1>
+    <div class="meta" id="hdr-meta"></div>
+    <p class="hook" id="hook"></p>
+    <div class="disclaimer"><strong>Note.</strong> This is a small, hand-sized demonstration of one mechanism from the paper; it does not reproduce the paper's experiments or results. Statements tagged <span class="badge paper">from the paper</span> are supported by the cited source; those tagged <span class="badge ours">our example</span> are our own examples or simplifications.</div>
+  </header>
+
+  <section class="card" id="sec-goals"><h2><span class="num">0</span>What you will learn</h2><ol class="goals" id="goals"></ol></section>
+
+  <section class="card" id="sec-idea"><h2><span class="num">0</span>The idea</h2><p id="context"></p><p id="intuition"></p></section>
+
+  <section class="card" id="sec-symbols"><h2><span class="num">1</span>Notation</h2><table class="sym" id="symbols"></table></section>
+
+  <section class="card" id="sec-eq"><h2><span class="num">2</span>The key equation <span id="eq-badge"></span></h2><div class="eq" id="equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>H</mi><mo>&#x0003D;</mo><mo>&#x02212;</mo><msubsup><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></msubsup><msub><mi>p</mi><mi>i</mi></msub><msub><mi>log</mi><mn>2</mn></msub><msub><mi>p</mi><mi>i</mi></msub></mrow></math></div><p class="meta" id="eq-note"></p></section>
+
+  <section class="card" id="sec-pg"><h2><span class="num">3</span>Playground</h2>
+    <p class="meta">Change the inputs on the left; every number and figure on the right is recomputed in your browser as you go.</p>
+    <div class="pg">
+      <div class="controls" id="controls" aria-label="Inputs"></div>
+      <div class="outs">
+        <div class="err" id="err" role="alert"></div>
+        <div class="insight" id="insight" aria-live="polite"></div>
+        <div class="scalars" id="scalars"></div>
+        <div id="visuals" class="outs"></div>
+        <details class="allvals" id="allvals-wrap"><summary>All computed values</summary><div class="tblwrap"><table class="data" id="allvals"></table></div></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="card steps" id="sec-steps"><h2><span class="num">4</span>Worked steps, with your current numbers</h2><ol id="steps"></ol></section>
+
+  <section class="card" id="sec-ex"><h2><span class="num">5</span>Exercises</h2><div class="explore" id="explore"></div></section>
+
+  <section class="card" id="sec-take"><h2><span class="num">0</span>Key takeaways</h2><ul class="takeaways" id="takeaways"></ul></section>
+
+  <section class="card" id="sec-lim"><h2><span class="num">6</span>Remarks</h2>
+    <div class="twocol"><div class="callout lim" id="lim-box"><h3>Limitation</h3><div id="limitation"></div></div><div class="callout mis" id="mis-box"><h3>Common error</h3><div id="misconception"></div></div></div>
+  </section>
+
+  <section class="card" id="sec-src"><h2><span class="num">7</span>Sources</h2>
+    <div id="source"></div>
+    <h3 style="margin-top:16px">What comes from where</h3>
+    <ul class="claims" id="claims"></ul>
+    <div id="verif-wrap"><h3 style="margin-top:16px">How this page was checked</h3><p id="verif"></p></div>
+    <div id="tests-wrap"><h3 style="margin-top:16px">Checks run live in this page</h3><ul class="tests" id="tests"></ul></div>
+  </section>
+  <footer>Generated automatically from a short learning brief. Works offline; no data leaves this page.</footer>
+</main>
+
+<script type="application/json" id="spec">{"title":"Discrete Entropy: Measuring Uncertainty in Bits","audience":"","paper":{"title":"A Mathematical Theory of Communication","authors":"Shannon (1948)","url":"https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf","section":"Section 6","equation":null},"hook_html":"How many yes/no questions does it take to pin down the outcome of a random experiment?","hide_undeclared":false,"symbols":[{"latex_html":"\u003cmath xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"\u003e\u003cmrow\u003e\u003cmi\u003eH\u003c/mi\u003e\u003c/mrow\u003e\u003c/math\u003e","meaning_html":"Entropy of the distribution, in bits","source":null},{"latex_html":"\u003cmath xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"\u003e\u003cmrow\u003e\u003cmsub\u003e\u003cmi\u003ep\u003c/mi\u003e\u003cmi\u003ei\u003c/mi\u003e\u003c/msub\u003e\u003c/mrow\u003e\u003c/math\u003e","meaning_html":"Probability of outcome i","source":null},{"latex_html":"\u003cmath xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"\u003e\u003cmrow\u003e\u003cmi\u003en\u003c/mi\u003e\u003c/mrow\u003e\u003c/math\u003e","meaning_html":"Number of possible outcomes","source":null},{"latex_html":"\u003cmath xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"\u003e\u003cmrow\u003e\u003cmsub\u003e\u003cmi\u003elog\u003c/mi\u003e\u003cmn\u003e2\u003c/mn\u003e\u003c/msub\u003e\u003c/mrow\u003e\u003c/math\u003e","meaning_html":"Base-2 logarithm, so entropy is in bits","source":null}],"equation":{"html":"\u003cmath xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"\u003e\u003cmrow\u003e\u003cmi\u003eH\u003c/mi\u003e\u003cmo\u003e\u0026#x0003D;\u003c/mo\u003e\u003cmo\u003e\u0026#x02212;\u003c/mo\u003e\u003cmsubsup\u003e\u003cmo\u003e\u0026#x02211;\u003c/mo\u003e\u003cmrow\u003e\u003cmi\u003ei\u003c/mi\u003e\u003cmo\u003e\u0026#x0003D;\u003c/mo\u003e\u003cmn\u003e1\u003c/mn\u003e\u003c/mrow\u003e\u003cmrow\u003e\u003cmi\u003en\u003c/mi\u003e\u003c/mrow\u003e\u003c/msubsup\u003e\u003cmsub\u003e\u003cmi\u003ep\u003c/mi\u003e\u003cmi\u003ei\u003c/mi\u003e\u003c/msub\u003e\u003cmsub\u003e\u003cmi\u003elog\u003c/mi\u003e\u003cmn\u003e2\u003c/mn\u003e\u003c/msub\u003e\u003cmsub\u003e\u003cmi\u003ep\u003c/mi\u003e\u003cmi\u003ei\u003c/mi\u003e\u003c/msub\u003e\u003c/mrow\u003e\u003c/math\u003e","source":"paper","note_html":"Shannon\u0026#x27;s discrete entropy formula. We use the standard modern form with base-2 logarithm to measure bits."},"controls":[{"id":"p","type":"vector","label":"Probability distribution (auto-normalized)","length":4,"min":0.0,"max":1.0,"step":0.05,"default":[0.4,0.3,0.2,0.1],"labels":["A","B","C","D"],"label_html":"Probability distribution (auto-normalized)"},{"id":"n","type":"slider","label":"Number of outcomes used","min":1.0,"max":4.0,"step":1,"default":4.0,"symbol":"n","label_html":"Number of outcomes used"}],"outputs":[{"id":"p","type":"vector","label":"Normalized probabilities","labels":["A","B","C","D"],"label_html":"Normalized probabilities"},{"id":"contributions","type":"vector","label":"Contribution of each outcome (bits)","labels":["A","B","C","D"],"label_html":"Contribution of each outcome (bits)"},{"id":"H","type":"scalar","label":"Entropy H (bits)","unit":"bits","label_html":"Entropy H (bits)"},{"id":"table","type":"table","label":"Per-outcome breakdown","columns":["Outcome","p_i","-log2 p_i","Contribution"],"rows":[],"label_html":"Per-outcome breakdown"},{"id":"flow","type":"flow","label":"Outcome probabilities","label_html":"Outcome probabilities"}],"compute":"function compute(inputs){\n  const raw = inputs.p.slice(0, inputs.n);\n  const sumRaw = raw.reduce((a,b)=\u003ea+b,0);\n  let p = raw.map(x =\u003e sumRaw \u003e 0 ? x/sumRaw : 1/raw.length);\n  const contributions = p.map(pi =\u003e pi \u003e 0 ? -pi * Math.log2(pi) : 0);\n  const H = contributions.reduce((a,b)=\u003ea+b,0);\n  const table = {\n    columns: [\"Outcome\", \"p_i\", \"-log2 p_i\", \"Contribution\"],\n    rows: p.map((pi, i) =\u003e [\n      String.fromCharCode(65+i),\n      pi.toFixed(4),\n      pi \u003e 0 ? (-Math.log2(pi)).toFixed(4) : \"0\",\n      contributions[i].toFixed(4)\n    ])\n  };\n  const flow = {\n    nodes: p.map((pi, i) =\u003e ({\n      id: \"out\"+i,\n      label: String.fromCharCode(65+i),\n      value: pi\n    })),\n    edges: []\n  };\n  let insight = \"\";\n  if (sumRaw === 0) {\n    insight = \"All probabilities were zero; using a uniform distribution instead.\";\n  } else {\n    const maxP = Math.max(...p);\n    const minP = Math.min(...p);\n    if (maxP === 1) {\n      insight = \"One outcome is certain, so entropy is 0 bits.\";\n    } else if (Math.abs(maxP - minP) \u003c 1e-9) {\n      insight = \"All \" + p.length + \" outcomes are equally likely, giving \" + H.toFixed(2) + \" bits.\";\n    } else {\n      insight = \"Entropy is \" + H.toFixed(2) + \" bits. The most likely outcome contributes \" + contributions[p.indexOf(maxP)].toFixed(2) + \" bits, while the least likely contributes \" + contributions[p.indexOf(minP)].toFixed(2) + \" bits.\";\n    }\n  }\n  return { p, contributions, H, table, flow, insight };\n}","steps":[{"html":"\u003cmath xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"\u003e\u003cmrow\u003e\u003cmi\u003eH\u003c/mi\u003e\u003cmo\u003e\u0026#x0003D;\u003c/mo\u003e\u003cmo\u003e\u0026#x02212;\u003c/mo\u003e\u003cmsubsup\u003e\u003cmo\u003e\u0026#x02211;\u003c/mo\u003e\u003cmrow\u003e\u003cmi\u003ei\u003c/mi\u003e\u003cmo\u003e\u0026#x0003D;\u003c/mo\u003e\u003cmn\u003e1\u003c/mn\u003e\u003c/mrow\u003e\u003cmrow\u003e\u003cmi\u003en\u003c/mi\u003e\u003c/mrow\u003e\u003c/msubsup\u003e\u003cmsub\u003e\u003cmi\u003ep\u003c/mi\u003e\u003cmi\u003ei\u003c/mi\u003e\u003c/msub\u003e\u003cmsub\u003e\u003cmi\u003elog\u003c/mi\u003e\u003cmn\u003e2\u003c/mn\u003e\u003c/msub\u003e\u003cmsub\u003e\u003cmi\u003ep\u003c/mi\u003e\u003cmi\u003ei\u003c/mi\u003e\u003c/msub\u003e\u003c/mrow\u003e\u003c/math\u003e"},{"html":"\u003cmath xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"\u003e\u003cmrow\u003e\u003cmtext\u003eWith\u0026#x000A0;\u003c/mtext\u003e\u003cmi\u003en\u003c/mi\u003e\u003cmo\u003e\u0026#x0003D;\u003c/mo\u003e\u003cmn class=\"live\" data-ph=\"n\"\u003e…\u003c/mn\u003e\u003cmtext\u003e\u0026#x000A0;outcomes,\u0026#x000A0;\u003c/mtext\u003e\u003cmi\u003eH\u003c/mi\u003e\u003cmo\u003e\u0026#x0003D;\u003c/mo\u003e\u003cmn class=\"live\" data-ph=\"H\"\u003e…\u003c/mn\u003e\u003cmtext\u003e\u0026#x000A0;bits\u003c/mtext\u003e\u003c/mrow\u003e\u003c/math\u003e"},{"html":"\u003cmath xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"\u003e\u003cmrow\u003e\u003cmtext\u003eEach\u0026#x000A0;outcome\u0026#x000A0;contributes\u0026#x000A0;\u003c/mtext\u003e\u003cmo\u003e\u0026#x02212;\u003c/mo\u003e\u003cmsub\u003e\u003cmi\u003ep\u003c/mi\u003e\u003cmi\u003ei\u003c/mi\u003e\u003c/msub\u003e\u003cmsub\u003e\u003cmi\u003elog\u003c/mi\u003e\u003cmn\u003e2\u003c/mn\u003e\u003c/msub\u003e\u003cmsub\u003e\u003cmi\u003ep\u003c/mi\u003e\u003cmi\u003ei\u003c/mi\u003e\u003c/msub\u003e\u003cmtext\u003e\u0026#x000A0;bits\u003c/mtext\u003e\u003c/mrow\u003e\u003c/math\u003e"}],"explorations":[{"title":"Certainty gives zero bits","predict_html":"What happens to entropy when one outcome has probability 1?","set":{"p":[1,0,0,0],"n":4},"observe_html":"The entropy H becomes 0 bits. The table shows that the certain outcome contributes 0 bits, and the zero-probability outcomes also contribute 0.","why_html":"When \u003ci\u003ep\u003c/i\u003e\u003csub\u003e\u003ci\u003ei\u003c/i\u003e\u003c/sub\u003e = 1 for one outcome, its contribution is \u0026minus;1 * log\u003csub\u003e2\u003c/sub\u003e(1) = 0. All other \u003ci\u003ep\u003c/i\u003e\u003csub\u003e\u003ci\u003ei\u003c/i\u003e\u003c/sub\u003e are 0, and we treat 0 * log\u003csub\u003e2\u003c/sub\u003e(0) as 0. So the sum is 0.","expect":"approx(out.H, 0, 1e-9)"},{"title":"Four equally likely outcomes give two bits","predict_html":"What is the entropy when all four outcomes are equally likely?","set":{"p":[0.25,0.25,0.25,0.25],"n":4},"observe_html":"The entropy H becomes 2 bits. Each outcome contributes 0.5 bits, and there are four of them.","why_html":"For \u003ci\u003ep\u003c/i\u003e\u003csub\u003e\u003ci\u003ei\u003c/i\u003e\u003c/sub\u003e = 1/4, each contribution is \u0026minus;(1/4) * log\u003csub\u003e2\u003c/sub\u003e(1/4) = (1/4)\u0026times;2 = 0.5 bits. Summing over four outcomes gives 2 bits.","expect":"approx(out.H, 2, 1e-9)"}],"limitation_html":"This page only covers discrete entropy for a fixed number of outcomes. It does not address continuous entropy (differential entropy) or the entropy of sequences with memory.","misconception_html":"Entropy is not the same as the number of outcomes. A distribution with many outcomes can have low entropy if one outcome is very likely.","claims":[{"html":"Entropy is defined as H = \u0026minus;Σ \u003ci\u003ep\u003c/i\u003e\u003csub\u003e\u003ci\u003ei\u003c/i\u003e\u003c/sub\u003e log\u003csub\u003e2\u003c/sub\u003e \u003ci\u003ep\u003c/i\u003e\u003csub\u003e\u003ci\u003ei\u003c/i\u003e\u003c/sub\u003e.","source":"paper"},{"html":"A certain outcome gives 0 bits of entropy.","source":"paper"},{"html":"Four equally likely outcomes give 2 bits of entropy.","source":"paper"},{"html":"We use base-2 logarithms to measure entropy in bits.","source":"ours"},{"html":"The toy setup normalizes the input probabilities and treats 0 log 0 as 0.","source":"ours"}],"self_tests":[{"name":"Entropy is nonnegative","set":{"p":[0.2,0.3,0.1,0.4],"n":4},"expect":"out.H \u003e= 0"},{"name":"Contributions sum to entropy","set":{"p":[0.1,0.2,0.3,0.4],"n":4},"expect":"approx(sum(out.contributions), out.H, 1e-9)"},{"name":"Zero probability contributes nothing","set":{"p":[0.5,0,0.5,0],"n":4},"expect":"approx(out.contributions[1], 0, 1e-9) \u0026\u0026 approx(out.contributions[3], 0, 1e-9)"},{"name":"Uniform distribution maximizes entropy for given n","set":{"p":[0.25,0.25,0.25,0.25],"n":4},"expect":"approx(out.H, Math.log2(4), 1e-9)"}],"outcomes":[{"html":"Compute entropy for a small discrete distribution.","via_html":"the control Probability distribution (auto-normalized), the control Number of outcomes used, Entropy H (bits)"},{"html":"Explain why certainty gives zero bits.","via_html":"Exercise 1"},{"html":"Explain why four equally likely outcomes give two bits.","via_html":"Exercise 2"},{"html":"Handle zero probabilities correctly.","via_html":"Per-outcome breakdown, Contribution of each outcome (bits)"}],"context_html":"Shannon\u0026#x27;s discrete entropy quantifies the average uncertainty of a random variable. It is the foundation of information theory and appears throughout coding, compression, and machine learning.","intuition_html":"Entropy measures how surprised you expect to be. If one outcome is certain, there is no surprise and entropy is zero. If many outcomes are equally likely, surprise is high and entropy is large. Each outcome contributes in proportion to its probability, but rare outcomes contribute more surprise per occurrence.","takeaways":["Entropy is the average surprise per outcome, measured in bits.","A certain outcome gives 0 bits; four equally likely outcomes give 2 bits.","Outcomes with probability zero contribute nothing to entropy."],"verification":{"summary":"4/4 self-tests passed; 2/2 explorations verified; 7 edge-case runs.","passed":true,"open_issues":[]}}</script>
+<script>
+(function(){
+"use strict";
+var S = JSON.parse(document.getElementById("spec").textContent);
+var NS = "http://www.w3.org/2000/svg";
+function $(id){return document.getElementById(id);}
+function h(tag, attrs){
+  var e = document.createElement(tag);
+  if (attrs) for (var k in attrs){
+    if (k === "text") e.textContent = attrs[k];
+    else if (k === "html") e.innerHTML = attrs[k];
+    else if (k.slice(0,2) === "on") e.addEventListener(k.slice(2), attrs[k]);
+    else if (attrs[k] !== null && attrs[k] !== undefined && attrs[k] !== false) e.setAttribute(k, attrs[k]);
+  }
+  for (var i = 2; i < arguments.length; i++){ var c = arguments[i]; if (c == null) continue; e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); }
+  return e;
+}
+function s(tag, attrs, text){
+  var e = document.createElementNS(NS, tag);
+  if (attrs) for (var k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) e.setAttribute(k, attrs[k]);
+  if (text !== undefined && text !== null) e.textContent = text;
+  return e;
+}
+function clone(o){ return o === undefined ? undefined : JSON.parse(JSON.stringify(o)); }
+function isNum(v){ return typeof v === "number" && isFinite(v); }
+function fmt(v, d){
+  if (typeof v === "boolean") return v ? "yes" : "no";
+  if (typeof v === "string") return v;
+  if (Array.isArray(v)) return "[" + v.map(function(x){return fmt(x,d);}).join(", ") + "]";
+  if (typeof v !== "number") return "—";
+  if (!isFinite(v)) return isNaN(v) ? "NaN" : (v > 0 ? "∞" : "−∞");
+  if (d === undefined || d === null) d = 3;
+  var a = Math.abs(v);
+  if (a !== 0 && (a >= 1e5 || a < Math.pow(10,-d))) return v.toExponential(2).replace("-","−");
+  var t = (+v.toFixed(d)).toString();
+  if (t === "-0") t = "0";
+  return t.replace("-","−");
+}
+function esc(x){ return String(x).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function labelEl(c){ return h("span",{html: c.label_html || esc(c.label || c.id)}); }
+/* same typesetting as render.py label_html, for text produced at runtime (tables, insight) */
+function mathText(s){
+  var t = esc(s == null ? "" : s);
+  t = t.replace(/\bsqrt\(([^()]{1,30})\)/g, '&radic;<span class="ovl">$1</span>');
+  t = t.replace(/\blog(2|10)\b/g, "log<sub>$1</sub>");
+  t = t.replace(/([0-9)])\s?\*\s?(?=[0-9(])/g, "$1&times;");
+  t = t.replace(/(^|[\s(=])-(?=[^\s\-.,;:])/g, "$1&minus;");
+  t = t.replace(/([A-Za-z0-9)\]\u0391-\u03C9]) - (?=[A-Za-z0-9(\u0391-\u03C9])/g, "$1 &minus; ");
+  t = t.replace(/(^|[^A-Za-z0-9_\u0391-\u03C9])([A-Za-z\u0391-\u03C9]{1,3})_(?:\{([^{}]{1,12})\}|([A-Za-z0-9]{1,4}|[+\-]))(?![A-Za-z0-9_])/g, function(m, pre, b, g1, g2){
+    var sub = g1 || g2; if (g2 && b.length > 1 && g2.length > 1) return m;
+    var it = function(x){ return (x.length === 1 && /[A-Za-z]/.test(x)) ? "<i>" + x + "</i>" : x; };
+    return pre + it(b) + "<sub>" + (sub.length === 1 ? it(sub) : sub) + "</sub>"; });
+  t = t.replace(/([A-Za-z0-9)\]\u0391-\u03C9])\^(?:\{([^{}]{1,20})\}|\(([^()]{1,20})\)|((?:-|&minus;)?[A-Za-z0-9\u0391-\u03C9]{1,3}))/g, function(m, b, g1, g2, g3){ return b + "<sup>" + (g1 || g2 || g3).replace(/^-/, "&minus;") + "</sup>"; });
+  return t;
+}
+/* SVG text cannot hold HTML: typeset p_i, x^2, sqrt(d), log2 with Unicode sub/superscripts where they exist */
+var SUBS = {"0":"₀","1":"₁","2":"₂","3":"₃","4":"₄","5":"₅","6":"₆","7":"₇","8":"₈","9":"₉","a":"ₐ","e":"ₑ","h":"ₕ","i":"ᵢ","j":"ⱼ","k":"ₖ","l":"ₗ","m":"ₘ","n":"ₙ","o":"ₒ","p":"ₚ","r":"ᵣ","s":"ₛ","t":"ₜ","u":"ᵤ","v":"ᵥ","x":"ₓ","+":"₊","-":"₋"};
+var SUPS = {"0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹","T":"ᵀ","n":"ⁿ","i":"ⁱ","+":"⁺","-":"⁻","k":"ᵏ","t":"ᵗ"};
+function uni(str, map){ var out = ""; for (var i = 0; i < str.length; i++){ if (!(str[i] in map)) return null; out += map[str[i]]; } return out; }
+function svgLabel(s){
+  if (s == null) return s;
+  s = String(s).replace(/\bsqrt\(([^()]{1,20})\)/g, "√$1").replace(/\blog(2|10)\b/g, function(_, d){ return "log" + uni(d, SUBS); });
+  s = s.replace(/(^|[^A-Za-z0-9_\u0391-\u03C9])([A-Za-z\u0391-\u03C9]{1,3})_(?:\{([^{}]{1,8})\}|([A-Za-z0-9]{1,3}))(?![A-Za-z0-9_])/g, function(m, pre, b, g1, g2){ if (g2 && b.length > 1 && g2.length > 1) return m; var u = uni(g1 || g2, SUBS); return u ? pre + b + u : m; });
+  s = s.replace(/\^(?:\{([^{}]{1,6})\}|(-?[A-Za-z0-9]{1,3}))/g, function(m, g1, g2){ var u = uni(g1 || g2, SUPS); return u ? u : m; });
+  return s.replace(/(^|[\s(=])-(?=[^\s\-.,;:])/g, "$1−");
+}
+function errBox(msg){ var e=$("err"); if(!msg){e.style.display="none";return;} e.style.display="block"; e.textContent = msg; }
+
+/* ---------- header / static sections ---------- */
+var P = S.paper || {};
+$("title").textContent = S.title || "Interactive explanation";
+document.title = S.title || document.title;
+$("hook").innerHTML = S.hook_html || "";
+var hm = $("hdr-meta");
+if (S.audience) $("aud").textContent = "prepared for " + S.audience;
+if (P.title) hm.appendChild(h("span",{text:"After " + P.title + (P.authors ? ", " + P.authors : "") + (P.section ? ", " + P.section : "")}));
+
+function badge(src){ src = src === "paper" ? "paper" : "ours"; return h("span",{"class":"badge " + src, title: src === "paper" ? "Supported by the cited paper excerpt" : "Our own example or simplification", text: src === "paper" ? "from the paper" : "our example"}); }
+
+if (S.outcomes && S.outcomes.length){
+  S.outcomes.forEach(function(oc){ var li = h("li",{html:oc.html}); if (oc.via_html) li.appendChild(h("span",{"class":"via", html:"Covered by " + oc.via_html + "."})); $("goals").appendChild(li); });
+} else $("sec-goals").classList.add("hidden");
+if (S.context_html || S.intuition_html){ $("context").innerHTML = S.context_html || ""; $("intuition").innerHTML = S.intuition_html || "";
+  if (!S.context_html) $("context").classList.add("hidden"); if (!S.intuition_html) $("intuition").classList.add("hidden");
+} else $("sec-idea").classList.add("hidden");
+if (S.takeaways && S.takeaways.length){ S.takeaways.forEach(function(x){ $("takeaways").appendChild(h("li",{html:x})); }); } else $("sec-take").classList.add("hidden");
+if (S.verification){
+  var vp = $("verif");
+  vp.appendChild(document.createTextNode("Before this page was written, the generator ran the calculation code in a sandbox and checked it: "));
+  vp.appendChild(h("span",{"class": S.verification.passed ? "ok" : "", text: S.verification.summary}));
+  (S.verification.open_issues || []).forEach(function(x){ vp.appendChild(h("div",{"class":"meta", text:"Open issue: " + x})); });
+} else $("verif-wrap").classList.add("hidden");
+if (S.symbols && S.symbols.length){
+  S.symbols.forEach(function(sy){ var m = h("td",{html:sy.meaning_html}); if (sy.source === "ours") { var b = badge("ours"); b.classList.add("symsrc"); m.appendChild(b); } $("symbols").appendChild(h("tr",null,h("td",{html:sy.latex_html}),m)); });
+} else $("sec-symbols").classList.add("hidden");
+
+if (S.equation && S.equation.html){
+  $("equation").innerHTML = S.equation.html;
+  $("eq-badge").appendChild(badge(S.equation.source));
+  var notes = [];
+  if (S.equation.source === "paper"){ notes.push("From the paper" + ((P.section || P.equation) ? " (" + [P.section, P.equation].filter(Boolean).join(", ") + ")" : "") + "."); }
+  else notes.push("Our own formulation of the idea, not a verbatim equation from the paper.");
+  $("eq-note").innerHTML = "";
+  $("eq-note").appendChild(document.createTextNode(notes.join(" ")));
+  if (S.equation.note_html){ var sp = h("span",{html:" " + S.equation.note_html}); $("eq-note").appendChild(sp); }
+} else $("sec-eq").classList.add("hidden");
+
+if (S.limitation_html) $("limitation").innerHTML = S.limitation_html; else $("lim-box").classList.add("hidden");
+if (S.misconception_html) $("misconception").innerHTML = S.misconception_html; else $("mis-box").classList.add("hidden");
+if (!S.limitation_html && !S.misconception_html) $("sec-lim").classList.add("hidden");
+
+(function(){
+  var src = $("source");
+  var p = h("p");
+  p.appendChild(h("strong",{text:P.title || "Source paper"}));
+  if (P.authors) p.appendChild(document.createTextNode(" — " + P.authors));
+  src.appendChild(p);
+  var p2 = h("p",{"class":"meta"});
+  if (P.section) p2.appendChild(h("span",{text:"Section: " + P.section}));
+  if (P.equation) p2.appendChild(h("span",{text:"Equation: " + P.equation}));
+  if (!P.section && !P.equation) p2.appendChild(h("span",{text:"Exact section/equation number not stated in the brief."}));
+  src.appendChild(p2);
+  if (P.url){ var a = h("a",{href:P.url, rel:"noopener noreferrer", target:"_blank", text:P.url}); src.appendChild(h("p",null,"Link: ",a)); }
+  (S.claims || []).forEach(function(c){ $("claims").appendChild(h("li",null,badge(c.source),h("span",{html:c.html}))); });
+})();
+
+/* ---------- controls ---------- */
+var CTL = (S.controls || []).filter(function(c){ return c && c.id; });
+var state = {}, defaults = {};
+CTL.forEach(function(c){ defaults[c.id] = clone(c["default"]); });
+
+function numClamp(c, v){
+  v = +v; if (!isFinite(v)) v = 0;
+  if (isNum(c.min) && v < c.min) v = c.min;
+  if (isNum(c.max) && v > c.max) v = c.max;
+  return v;
+}
+function lenOf(c, obj, key, fallback){
+  var src = c[key];
+  if (src && obj[src] !== undefined){ var n = Math.round(+obj[src]); if (isFinite(n) && n >= 0) return n; }
+  return fallback;
+}
+function fillVal(c, i, j){
+  var d = c["default"];
+  if (j === undefined){ if (Array.isArray(d) && isNum(d[i])) return d[i]; }
+  else if (Array.isArray(d) && Array.isArray(d[i]) && isNum(d[i][j])) return d[i][j];
+  if (isNum(c.fill)) return c.fill;
+  return isNum(c.min) && c.min > 0 ? c.min : 0;
+}
+/* keep vector/matrix sizes consistent with the controls they depend on */
+function resize(obj){
+  CTL.forEach(function(c){
+    if (c.type === "vector"){
+      var arr = Array.isArray(obj[c.id]) ? obj[c.id] : [];
+      var n = lenOf(c, obj, "length_from", isNum(c.length) ? c.length : arr.length);
+      var out = [];
+      for (var i = 0; i < n; i++) out.push(isNum(arr[i]) ? arr[i] : fillVal(c, i));
+      obj[c.id] = out;
+    } else if (c.type === "matrix"){
+      var m = Array.isArray(obj[c.id]) ? obj[c.id] : [];
+      var R = lenOf(c, obj, "rows_from", isNum(c.rows) ? c.rows : m.length);
+      var C = lenOf(c, obj, "cols_from", isNum(c.cols) ? c.cols : (m[0] ? m[0].length : 0));
+      var mm = [];
+      for (var r = 0; r < R; r++){ var row = []; for (var k = 0; k < C; k++){ var v = m[r] && m[r][k]; row.push(isNum(v) ? v : fillVal(c, r, k)); } mm.push(row); }
+      obj[c.id] = mm;
+    }
+  });
+  return obj;
+}
+function applySet(obj, set){
+  if (!set) return obj;
+  var keys = Object.keys(set);
+  // scalars first (sizes), then arrays
+  keys.filter(function(k){ return !Array.isArray(set[k]); }).forEach(function(k){ obj[k] = clone(set[k]); });
+  resize(obj);
+  keys.filter(function(k){ return Array.isArray(set[k]); }).forEach(function(k){
+    obj[k] = clone(set[k]);
+    var c = CTL.filter(function(z){ return z.id === k; })[0];
+    if (c && c.type === "vector" && c.length_from && !(c.length_from in set)) obj[c.length_from] = set[k].length;
+    if (c && c.type === "matrix"){ if (c.rows_from && !(c.rows_from in set)) obj[c.rows_from] = set[k].length; if (c.cols_from && !(c.cols_from in set) && set[k][0]) obj[c.cols_from] = set[k][0].length; }
+  });
+  return resize(obj);
+}
+
+var widgets = {};
+function labelFor(c, i, key){
+  var L = c[key];
+  if (Array.isArray(L) && L[i] !== undefined) return String(L[i]);
+  return (c.type === "matrix" ? "" : (c.index_label || "") ) + (i + 1);
+}
+function numInput(c, v, onset, aria){
+  var inp = h("input",{type:"number", step:isNum(c.step)?c.step:"any", min:isNum(c.min)?c.min:null, max:isNum(c.max)?c.max:null, value:v, "aria-label":aria});
+  inp.addEventListener("input", function(){ if (inp.value === "" || inp.value === "-") return; onset(numClamp(c, inp.value), false); });
+  inp.addEventListener("change", function(){ var v2 = numClamp(c, inp.value); inp.value = v2; onset(v2, true); });
+  return inp;
+}
+function buildControl(c){
+  var box = h("div",{"class":"ctl", id:"ctl-" + c.id});
+  var head = h("label",{"class":"top"}, labelEl(c));
+  var help = c.help ? h("div",{"class":"help",text:c.help}) : null;
+  var w = {box:box, refresh:function(){}};
+  if (c.type === "slider"){
+    var val = h("span",{"class":"val"}); head.appendChild(val);
+    var rng = h("input",{type:"range", min:c.min, max:c.max, step:isNum(c.step)?c.step:"any", "aria-label":c.label || c.id});
+    rng.addEventListener("input", function(){ setVal(c.id, +rng.value); val.textContent = fmt(+rng.value,4) + (c.unit ? " " + c.unit : ""); });
+    head.setAttribute("for", "r-" + c.id); rng.id = "r-" + c.id;
+    box.appendChild(head); box.appendChild(rng);
+    w.refresh = function(){ rng.value = state[c.id]; val.textContent = fmt(+state[c.id],4) + (c.unit ? " " + c.unit : ""); };
+  } else if (c.type === "toggle"){
+    var cb = h("input",{type:"checkbox", id:"t-" + c.id});
+    var st = h("span",{"class":"val"});
+    head.setAttribute("for", "t-" + c.id);
+    var sw = h("label",{"class":"switch"}, cb, h("span",{"class":"track"}), st);
+    cb.addEventListener("change", function(){ setVal(c.id, cb.checked); st.textContent = cb.checked ? (c.on_label||"on") : (c.off_label||"off"); });
+    box.appendChild(head); box.appendChild(sw);
+    w.refresh = function(){ cb.checked = !!state[c.id]; st.textContent = cb.checked ? (c.on_label||"on") : (c.off_label||"off"); };
+  } else if (c.type === "select"){
+    var sel = h("select",{id:"s-" + c.id});
+    (c.options || []).forEach(function(o){ var v = (o && typeof o === "object") ? o.value : o; var t = (o && typeof o === "object") ? (o.label != null ? o.label : o.value) : o; sel.appendChild(h("option",{value:JSON.stringify(v), text:String(t)})); });
+    sel.addEventListener("change", function(){ setVal(c.id, JSON.parse(sel.value)); });
+    head.setAttribute("for", "s-" + c.id);
+    box.appendChild(head); box.appendChild(sel);
+    w.refresh = function(){ sel.value = JSON.stringify(state[c.id]); };
+  } else if (c.type === "vector"){
+    var body = h("div");
+    box.appendChild(head); box.appendChild(body);
+    w.refresh = function(){
+      body.innerHTML = "";
+      var arr = state[c.id] || [];
+      var src = activeSrc(c), act = src ? Math.round(+state[src]) : arr.length;
+      if (!isFinite(act)) act = arr.length;
+      var useSliders = c.widget !== "numbers" && isNum(c.min) && isNum(c.max) && arr.length <= 12;
+      if (useSliders){
+        arr.forEach(function(v, i){
+          var r = h("input",{type:"range", min:c.min, max:c.max, step:isNum(c.step)?c.step:"any", value:v, "aria-label":(c.label||c.id) + " " + labelFor(c,i,"labels")});
+          var n = numInput(c, v, function(nv, commit){ state[c.id][i] = nv; r.value = nv; changed(c.id); }, (c.label||c.id) + " " + labelFor(c,i,"labels") + " value");
+          r.addEventListener("input", function(){ state[c.id][i] = +r.value; n.value = r.value; changed(c.id); });
+          var off = i >= act;
+          if (off){ r.disabled = true; n.disabled = true; }
+          body.appendChild(h("div",{"class":"vrow" + (off ? " off" : ""), title: off ? "Not used while " + src + " = " + act : null}, h("span",{"class":"lab",text:labelFor(c,i,"labels")}), r, n));
+        });
+        if (act < arr.length){
+          var srcCtl = CTL.filter(function(z){ return z.id === src; })[0];
+          body.appendChild(h("div",{"class":"help", text:"Greyed rows are not used: only the first " + act + " count while “" + ((srcCtl && srcCtl.label) || src) + "” = " + act + "."}));
+        }
+      } else {
+        var g = h("div",{"class":"mgrid", style:"grid-template-columns:repeat(" + Math.min(arr.length,6) + ",1fr)"});
+        arr.forEach(function(v, i){ var ni = numInput(c, v, function(nv){ state[c.id][i] = nv; changed(c.id); }, (c.label||c.id) + " " + labelFor(c,i,"labels")); if (i >= act){ ni.disabled = true; ni.style.opacity = .38; } g.appendChild(ni); });
+        body.appendChild(g);
+      }
+    };
+  } else if (c.type === "matrix"){
+    var mb = h("div",{style:"overflow-x:auto"});
+    box.appendChild(head); box.appendChild(mb);
+    w.refresh = function(){
+      mb.innerHTML = "";
+      var m = state[c.id] || [], C = m[0] ? m[0].length : 0;
+      var g = h("div",{"class":"mgrid", style:"grid-template-columns:auto repeat(" + C + ",minmax(52px,1fr))"});
+      g.appendChild(h("span"));
+      for (var k = 0; k < C; k++) g.appendChild(h("span",{"class":"lab",text:labelFor(c,k,"col_labels")}));
+      m.forEach(function(row, r){
+        g.appendChild(h("span",{"class":"lab",text:labelFor(c,r,"row_labels")}));
+        row.forEach(function(v, k){ g.appendChild(numInput(c, v, function(nv){ state[c.id][r][k] = nv; changed(c.id); }, (c.label||c.id) + " row " + (r+1) + " column " + (k+1))); });
+      });
+      mb.appendChild(g);
+    };
+  } else {
+    box.appendChild(head); box.appendChild(h("div",{"class":"help",text:"(unsupported control type: " + c.type + ")"}));
+  }
+  if (help) box.appendChild(help);
+  widgets[c.id] = w;
+  return box;
+}
+/* A fixed-length vector can be "driven" by a count slider (e.g. n outcomes): rows beyond n are greyed out.
+   Explicit: "active_from": "<slider id>". Otherwise inferred: one integer slider whose max equals the vector length
+   and whose id/label looks like a count (n, k, number of..., outcomes, size...). */
+var ACT_ID = /^(n|k|m|N|K|M|num\w*|n_\w+|count\w*|size)$/, ACT_LABEL = /number|count|how many|outcomes|size|length|# ?of/i;
+function activeSrc(c){
+  if (c.type !== "vector") return null;
+  if (c.active_from) return c.active_from;
+  if (c.length_from) return null;
+  var L = isNum(c.length) ? c.length : (Array.isArray(c["default"]) ? c["default"].length : 0);
+  var cand = CTL.filter(function(s){
+    return s !== c && s.type === "slider" && s.max === L && isNum(s.min) && s.min >= 0 &&
+      (s.step === undefined || s.step === 1) && (ACT_ID.test(String(s.id)) || ACT_LABEL.test(String(s.label || "")));
+  });
+  return cand.length === 1 ? cand[0].id : null;
+}
+function dependents(id){ return CTL.filter(function(c){ return c.length_from === id || c.rows_from === id || c.cols_from === id || activeSrc(c) === id; }); }
+function setVal(id, v){
+  state[id] = v;
+  var deps = dependents(id);
+  if (deps.length){ resize(state); deps.forEach(function(c){ widgets[c.id].refresh(); }); }
+  changed(id);
+}
+var pending = false;
+function changed(){ if (pending) return; pending = true; requestAnimationFrame(function(){ pending = false; run(); }); }
+function refreshAll(){ CTL.forEach(function(c){ if (widgets[c.id]) widgets[c.id].refresh(); }); }
+function resetAll(){ state = resize(clone(defaults)); refreshAll(); run(); }
+
+/* ---------- compute ---------- */
+var computeFn = null;
+(function(){
+  var src = String(S.compute || "");
+  try { computeFn = new Function('"use strict";\n' + src + '\n;return (typeof compute === "function") ? compute : null;')(); } catch(e){ computeFn = null; }
+  if (!computeFn){ try { computeFn = new Function('"use strict";return (' + src + ');')(); } catch(e){ errBox("The calculation code could not be loaded: " + e.message); } }
+  if (typeof computeFn !== "function") computeFn = null;
+})();
+var DYN = {};  /* output declarations that arrive inside compute() results (C's typed outputs) */
+var OUT_TYPES = {scalar:1, vector:1, matrix:1, series:1, table:1, flow:1};
+var CAMEL = {rowLabels:"row_labels", colLabels:"col_labels", xLabel:"x_label", yLabel:"y_label"};
+function unwrap(out){
+  Object.keys(out).forEach(function(k){
+    var v = out[k];
+    if (v && typeof v === "object" && !Array.isArray(v) && OUT_TYPES[v.type] && "value" in v){
+      var d = {id:k};
+      Object.keys(v).forEach(function(a){ if (a !== "value") d[CAMEL[a] || a] = v[a]; });
+      DYN[k] = d; out[k] = v.value;
+    }
+  });
+  Object.keys(out).forEach(function(k){
+    var v = out[k], d = DYN[k] || DECL.filter(function(z){ return z.id === k; })[0] || {};
+    if (v && typeof v === "object" && !Array.isArray(v)){
+      if (v.x && v.lines && !v.series) v.series = v.lines;
+      if (v.marker && !v.markers) v.markers = [v.marker];
+      if (isNum(d.markerX) && !v.vlines) v.vlines = [{x: d.markerX}];
+      if (v.edges) v.edges.forEach(function(e){ if (e && e.weight === undefined && isNum(e.value)) e.weight = e.value; });
+    }
+  });
+  return out;
+}
+function evalCompute(x){
+  if (!computeFn) throw new Error("no compute() function");
+  var out = computeFn(clone(x));
+  if (!out || typeof out !== "object") throw new Error("compute() did not return an object");
+  return unwrap(out);
+}
+/* assertion helpers shared by all spec dialects: out/o = outputs, x/inp/inputs = inputs, base = outputs at defaults */
+function H_sum(a){ return (a || []).reduce(function(p, q){ return p + (+q || 0); }, 0); }
+function H_approx(a, b, tol){ tol = tol === undefined ? 1e-6 : tol; return Math.abs(a - b) <= tol * Math.max(1, Math.abs(b)); }
+function H_max(a){ return Math.max.apply(null, a); }
+function H_min(a){ return Math.min.apply(null, a); }
+function H_all(a, f){ return (a || []).every(f); }
+var baseOut = null;
+function evalExpr(expr, out, x){
+  if (!expr) return null;
+  try { return !!(new Function("out","o","x","inp","inputs","base","approx","sum","max","min","all",'"use strict";return (' + expr + ');'))(out, out, x, x, x, baseOut || out, H_approx, H_sum, H_max, H_min, H_all); } catch(e){ return null; }
+}
+
+/* ---------- outputs / visuals ---------- */
+var DECL = (S.outputs || []).filter(function(o){ return o && o.id; });
+var SKIP = {insight:1, warning:1, _:1};
+function inferType(v){
+  if (isNum(v) || (v && typeof v === "object" && !Array.isArray(v) && "value" in v && isNum(v.value))) return "scalar";
+  if (Array.isArray(v)){ if (v.length && Array.isArray(v[0])) return "matrix"; return "vector"; }
+  if (v && typeof v === "object"){
+    if (v.nodes && v.edges) return "flow";
+    if (v.columns && v.rows) return "table";
+    if (v.x && (v.y || v.series)) return "series";
+  }
+  return null;
+}
+function outputList(out){
+  var decl = DECL.slice();
+  Object.keys(DYN).forEach(function(k){ if (!decl.some(function(z){ return z.id === k; })) decl.push(DYN[k]); });
+  var list = decl.map(function(o){ var c = Object.assign({}, o); if (!c.type) c.type = inferType(out[o.id]); return c; });
+  var seen = {}; list.forEach(function(o){ seen[o.id] = 1; });
+  Object.keys(out).forEach(function(k){
+    if (seen[k] || SKIP[k] || k.charAt(0) === "_") return;
+    if (S.hide_undeclared || DECL.length) return;  /* A: outputs[] declares what is drawn */
+    var t = inferType(out[k]); if (t && t !== "scalar") list.push({id:k, type:t, label:k});
+    else if (t === "scalar") list.push({id:k, type:t, label:k, _auto:1});
+  });
+  return list.filter(function(o){ return !o.hidden; });
+}
+function resolveLabels(o, key, n, out){
+  var L = o[key];
+  if (typeof L === "string"){ L = (out && out[L] !== undefined) ? out[L] : state[L]; }
+  var res = [];
+  for (var i = 0; i < n; i++) res.push(Array.isArray(L) && L[i] !== undefined ? svgLabel(L[i]) : String(i + 1));
+  return res;
+}
+function ticks(a, b, n){
+  if (!(isFinite(a) && isFinite(b))) return [];
+  if (a === b){ a -= 1; b += 1; }
+  var span = b - a, step0 = span / (n || 5), mag = Math.pow(10, Math.floor(Math.log10(step0))), r = step0 / mag;
+  var step = (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag, res = [];
+  for (var t = Math.ceil(a / step) * step; t <= b + span * 1e-9; t += step) res.push(+t.toPrecision(12));
+  return res;
+}
+function svgRoot(W, H, label){ return s("svg",{viewBox:"0 0 " + W + " " + H, role:"img", "aria-label":label || "chart", preserveAspectRatio:"xMidYMid meet", style:"max-width:" + Math.round(W * 1.15) + "px"}); }
+
+function drawVector(v, o, out){
+  var n = v.length, W = 560, H = 230, L = 46, R = 10, T = 22, B = 34;
+  var vals = v.map(function(x){ return isNum(x) ? x : 0; });
+  var lo = isNum(o.min) ? o.min : Math.min(0, Math.min.apply(null, vals));
+  var hi = isNum(o.max) ? o.max : Math.max(0, Math.max.apply(null, vals));
+  if (hi === lo) hi = lo + 1;
+  lo = Math.min(lo, Math.min.apply(null, vals)); hi = Math.max(hi, Math.max.apply(null, vals));
+  var y = function(x){ return T + (H - T - B) * (1 - (x - lo) / (hi - lo)); };
+  var svg = svgRoot(W, H, o.label);
+  ticks(lo, hi, 4).forEach(function(t){ svg.appendChild(s("line",{x1:L, x2:W-R, y1:y(t), y2:y(t), "class":"gridl"})); svg.appendChild(s("text",{x:L-6, y:y(t)+4, "text-anchor":"end", "font-size":11, "class":"muted"}, fmt(t,3))); });
+  var labs = resolveLabels(o, "labels", n, out);
+  var bw = (W - L - R) / Math.max(n, 1), imax = vals.indexOf(Math.max.apply(null, vals));
+  var step = n <= 12 ? 1 : Math.ceil(n / 10);
+  vals.forEach(function(x, i){
+    var x0 = L + i * bw + bw * 0.15, w = bw * 0.7, y0 = y(Math.max(0, x)), y1 = y(Math.min(0, x));
+    var hl = (o.highlight === "max" && i === imax);
+    var bar = s("rect",{x:x0, y:y0, width:w, height:Math.max(1, y1 - y0), rx: n > 30 ? 1 : 3, fill: hl ? "var(--bar2)" : (o.color === 2 ? "var(--bar2)" : "var(--bar)")});
+    bar.appendChild(s("title", null, labs[i] + ": " + fmt(v[i], isNum(o.digits) ? o.digits : 3)));
+    svg.appendChild(bar);
+    if (n <= 12){ var ty = x >= 0 ? y0 - 5 : y1 + 13;
+      svg.appendChild(s("text",{x:x0 + w/2, y:ty, "text-anchor":"middle", "font-size":12, "font-weight":600}, fmt(v[i], isNum(o.digits) ? o.digits : 3))); }
+    if (i % step === 0 || i === n - 1 && n <= 12)
+      svg.appendChild(s("text",{x:x0 + w/2, y:H - B + 16, "text-anchor":"middle", "font-size":12, "class":"muted"}, labs[i]));
+  });
+  svg.appendChild(s("line",{x1:L, x2:W-R, y1:y(0), y2:y(0), "class":"axis"}));
+  if (o.x_label) svg.appendChild(s("text",{x:(L+W-R)/2, y:H-2, "text-anchor":"middle", "font-size":11, "class":"muted"}, svgLabel(o.x_label)));
+  var yl = o.y_label || o.unit;
+  if (yl) svg.appendChild(s("text",{x:10, y:(T+H-B)/2, "text-anchor":"middle", "font-size":11, "class":"muted", transform:"rotate(-90 10 " + ((T+H-B)/2) + ")"}, svgLabel(yl)));
+  return svg;
+}
+/* a long, evenly spaced increasing list (t = 0, 0.05, 0.1, ...) is an axis, not data */
+function isAxis(v){
+  if (!Array.isArray(v) || v.length < 8 || !v.every(isNum)) return false;
+  var d = v[1] - v[0]; if (!(d > 0)) return false;
+  for (var i = 2; i < v.length; i++) if (Math.abs((v[i] - v[i-1]) - d) > 1e-6 * Math.max(1, Math.abs(d))) return false;
+  return true;
+}
+function drawLongVector(v, o, axis){
+  var xs = axis ? axis.values : v.map(function(_, i){ return i + 1; });
+  var ser = {x: xs, series: [{name: o.label || o.id, y: v}]};
+  var oo = Object.assign({}, o, {x_label: axis ? (axis.label || axis.id) : (o.x_label || "index"), y_label: o.y_label || o.unit || ""});
+  return drawSeries(ser, oo);
+}
+var CSSV = getComputedStyle(document.documentElement), HEAT = (CSSV.getPropertyValue("--heat") || "132,1,50").trim(), HEATN = (CSSV.getPropertyValue("--heat-neg") || "31,63,120").trim();
+function heatColor(x, lo, hi, diverging){
+  if (!isNum(x)) return {fill:"var(--grid)", dark:false};
+  if (diverging){
+    var m = Math.max(Math.abs(lo), Math.abs(hi)) || 1, t = Math.max(-1, Math.min(1, x / m));
+    var a = Math.abs(t);
+    return {fill: t >= 0 ? "rgba(" + HEAT + "," + (0.08 + 0.85*a) + ")" : "rgba(" + HEATN + "," + (0.08 + 0.85*a) + ")", dark: a > 0.55};
+  }
+  var u = hi > lo ? (x - lo) / (hi - lo) : 0.5; u = Math.max(0, Math.min(1, u));
+  return {fill:"rgba(" + HEAT + "," + (0.06 + 0.88*u) + ")", dark: u > 0.55};
+}
+function drawMatrix(m, o, out){
+  var R = m.length, C = R ? m[0].length : 0, sums = !!o.show_row_sums;
+  var cw = Math.max(38, Math.min(70, 480 / Math.max(C + (sums?1:0), 1))), ch = Math.min(40, cw * 0.7);
+  var L = 46, T = 26, W = L + cw * (C + (sums?1:0)) + (sums?8:0) + 6, H = T + ch * R + 6;
+  var flat = []; m.forEach(function(r){ r.forEach(function(x){ if (isNum(x)) flat.push(x); }); });
+  var lo = isNum(o.min) ? o.min : Math.min.apply(null, flat.concat([0])), hi = isNum(o.max) ? o.max : Math.max.apply(null, flat.concat([0]));
+  var div = o.diverging !== undefined ? !!o.diverging : (lo < 0 && hi > 0);
+  var svg = svgRoot(W, H, o.label);
+  var rl = resolveLabels(o, "row_labels", R, out), cl = resolveLabels(o, "col_labels", C, out);
+  cl.forEach(function(t, k){ svg.appendChild(s("text",{x:L + cw*k + cw/2, y:T-8, "text-anchor":"middle", "font-size":12, "class":"muted"}, t)); });
+  if (sums) svg.appendChild(s("text",{x:L + cw*C + 8 + cw/2, y:T-8, "text-anchor":"middle", "font-size":12, "class":"muted"}, "row Σ"));
+  m.forEach(function(row, r){
+    svg.appendChild(s("text",{x:L-8, y:T + ch*r + ch/2 + 4, "text-anchor":"end", "font-size":12, "class":"muted"}, rl[r]));
+    var tot = 0;
+    row.forEach(function(x, k){
+      var col = heatColor(x, lo, hi, div); if (isNum(x)) tot += x;
+      svg.appendChild(s("rect",{x:L + cw*k + 1, y:T + ch*r + 1, width:cw-2, height:ch-2, rx:4, fill:col.fill}));
+      var lbl = fmt(x, isNum(o.digits) ? o.digits : 3);
+      var t = s("text",{x:L + cw*k + cw/2, y:T + ch*r + ch/2 + 4, "text-anchor":"middle", "font-size": lbl.length > 5 ? 10.5 : 12, "font-weight":600}, lbl);
+      if (col.dark) t.setAttribute("style","fill:#fff");
+      svg.appendChild(t);
+    });
+    if (sums) svg.appendChild(s("text",{x:L + cw*C + 8 + cw/2, y:T + ch*r + ch/2 + 4, "text-anchor":"middle", "font-size":12, "font-weight":700}, fmt(tot, 3)));
+  });
+  return svg;
+}
+var PAL = ["var(--bar)","var(--bar2)","#2a9d8f","#b5179e","#6c757d","#e63946"];
+function drawSeries(v, o){
+  var xs = v.x || [], series = v.series || [{name:o.y_label || "", y:v.y || []}];
+  var W = 560, H = 260, L = 50, R = 14, T = 16, B = 40;
+  var allY = []; series.forEach(function(sr){ (sr.y||[]).forEach(function(y){ if (isNum(y)) allY.push(y); }); });
+  (v.markers || []).forEach(function(mk){ if (isNum(mk.y)) allY.push(mk.y); });
+  var fx = xs.filter(isNum);
+  var x0 = isNum(o.xmin) ? o.xmin : Math.min.apply(null, fx), x1 = isNum(o.xmax) ? o.xmax : Math.max.apply(null, fx);
+  var y0 = isNum(o.ymin) ? o.ymin : Math.min.apply(null, allY), y1 = isNum(o.ymax) ? o.ymax : Math.max.apply(null, allY);
+  if (!isFinite(x0) || !isFinite(x1)){ x0 = 0; x1 = 1; } if (x0 === x1){ x0 -= 1; x1 += 1; }
+  if (!isFinite(y0) || !isFinite(y1)){ y0 = 0; y1 = 1; } if (y0 === y1){ y0 -= 1; y1 += 1; }
+  if (!isNum(o.ymin) && !isNum(o.ymax)){ var pad = (y1 - y0) * 0.06; y0 -= pad; y1 += pad; }
+  var X = function(x){ return L + (W - L - R) * (x - x0) / (x1 - x0); }, Y = function(y){ return T + (H - T - B) * (1 - (y - y0) / (y1 - y0)); };
+  var svg = svgRoot(W, H, o.label);
+  ticks(y0, y1, 5).forEach(function(t){ svg.appendChild(s("line",{x1:L, x2:W-R, y1:Y(t), y2:Y(t), "class":"gridl"})); svg.appendChild(s("text",{x:L-6, y:Y(t)+4, "text-anchor":"end", "font-size":11, "class":"muted"}, fmt(t,3))); });
+  ticks(x0, x1, 6).forEach(function(t){ svg.appendChild(s("line",{x1:X(t), x2:X(t), y1:T, y2:H-B, "class":"gridl"})); svg.appendChild(s("text",{x:X(t), y:H-B+15, "text-anchor":"middle", "font-size":11, "class":"muted"}, fmt(t,3))); });
+  svg.appendChild(s("line",{x1:L, x2:W-R, y1:H-B, y2:H-B, "class":"axis"}));
+  svg.appendChild(s("line",{x1:L, x2:L, y1:T, y2:H-B, "class":"axis"}));
+  if (y0 < 0 && y1 > 0) svg.appendChild(s("line",{x1:L, x2:W-R, y1:Y(0), y2:Y(0), "class":"axis", "stroke-dasharray":"3 3"}));
+  var clipId = "c" + Math.random().toString(36).slice(2);
+  var cp = s("clipPath",{id:clipId}); cp.appendChild(s("rect",{x:L, y:T, width:W-L-R, height:H-T-B})); svg.appendChild(cp);
+  series.forEach(function(sr, si){
+    var d = "", pen = false;
+    for (var i = 0; i < xs.length; i++){
+      var y = sr.y ? sr.y[i] : undefined;
+      if (!isNum(xs[i]) || !isNum(y)){ pen = false; continue; }
+      d += (pen ? "L" : "M") + X(xs[i]).toFixed(1) + " " + Y(y).toFixed(1); pen = true;
+    }
+    var col = sr.color || PAL[si % PAL.length];
+    if (sr.style === "points"){ for (var j = 0; j < xs.length; j++) if (isNum(xs[j]) && sr.y && isNum(sr.y[j])) svg.appendChild(s("circle",{cx:X(xs[j]), cy:Y(sr.y[j]), r:3, fill:col, "clip-path":"url(#"+clipId+")"})); }
+    else svg.appendChild(s("path",{d:d, fill:"none", stroke:col, "stroke-width":2.2, "stroke-dasharray": sr.dashed ? "6 4" : null, "clip-path":"url(#"+clipId+")"}));
+  });
+  (v.vlines || []).forEach(function(vl){ if (!isNum(vl.x)) return; svg.appendChild(s("line",{x1:X(vl.x), x2:X(vl.x), y1:T, y2:H-B, stroke:"var(--bar2)", "stroke-width":1.5, "stroke-dasharray":"4 3"})); if (vl.label) svg.appendChild(s("text",{x:X(vl.x)+4, y:T+12, "font-size":11}, vl.label)); });
+  (v.markers || []).forEach(function(mk){ if (!isNum(mk.x) || !isNum(mk.y)) return; svg.appendChild(s("circle",{cx:X(mk.x), cy:Y(mk.y), r:5, fill:"var(--bar2)", stroke:"var(--card)", "stroke-width":2})); if (mk.label) svg.appendChild(s("text",{x:X(mk.x)+7, y:Y(mk.y)-7, "font-size":11, "font-weight":600}, mk.label)); });
+  if (o.x_label) svg.appendChild(s("text",{x:(L+W-R)/2, y:H-4, "text-anchor":"middle", "font-size":12, "class":"muted"}, svgLabel(o.x_label)));
+  if (o.y_label){ var yl = s("text",{x:12, y:(T+H-B)/2, "text-anchor":"middle", "font-size":12, "class":"muted", transform:"rotate(-90 12 " + ((T+H-B)/2) + ")"}, svgLabel(o.y_label)); svg.appendChild(yl); }
+  if (series.length > 1){
+    var lx = L + 8;
+    series.forEach(function(sr, si){ var col = sr.color || PAL[si % PAL.length]; svg.appendChild(s("rect",{x:lx, y:T+4, width:14, height:4, fill:col})); var t = s("text",{x:lx+18, y:T+10, "font-size":11}, svgLabel(sr.name) || ("series " + (si+1))); svg.appendChild(t); lx += 30 + 7 * String(sr.name||"").length; });
+  }
+  return svg;
+}
+function drawTable(v, o){
+  var t = h("table",{"class":"data"}), tr = h("tr");
+  (v.columns || []).forEach(function(c){ tr.appendChild(h("th",{html:mathText(c)})); });
+  t.appendChild(h("thead",null,tr));
+  var tb = h("tbody");
+  (v.rows || []).forEach(function(r){ var row = h("tr"); (r || []).forEach(function(c){ row.appendChild(typeof c === "number" ? h("td",{text: fmt(c, isNum(o.digits) ? o.digits : 3)}) : h("td",{html: mathText(c)})); }); tb.appendChild(row); });
+  t.appendChild(tb);
+  return h("div",{"class":"tblwrap"}, t);
+}
+function drawFlow(v, o){
+  var nodes = v.nodes || [], edges = (v.edges || []).filter(function(e){ return e && e.from != null && e.to != null; });
+  var idx = {}; nodes.forEach(function(n, i){ idx[n.id] = i; });
+  var layer = nodes.map(function(n){ return isNum(n.layer) ? n.layer : null; });
+  var layered = layer.every(function(l){ return l !== null; });
+  if (!layered && v.layout !== "circle"){
+    // longest-path layering; give up (circle) on cycles
+    var depth = nodes.map(function(){ return 0; }), ok = true;
+    for (var it = 0; it <= nodes.length; it++){
+      var moved = false;
+      edges.forEach(function(e){ var a = idx[e.from], b = idx[e.to]; if (a === undefined || b === undefined || a === b) return; if (depth[b] < depth[a] + 1){ depth[b] = depth[a] + 1; moved = true; } });
+      if (!moved) break; if (it === nodes.length) ok = false;
+    }
+    if (ok){ layer = depth; layered = true; }
+  }
+  var dg = isNum(o.digits) ? o.digits : 3;
+  /* node values: round long decimals, flatten arrays, keep it short (full text in a tooltip) */
+  function valText(v){
+    if (v == null) return "";
+    if (typeof v === "number") return fmt(v, dg);
+    if (Array.isArray(v)) return "[" + v.map(function(x){ return Array.isArray(x) ? x.map(function(y){ return fmt(y, dg); }).join(", ") : fmt(x, dg); }).join("; ") + "]";
+    return svgLabel(String(v).replace(/-?\d+\.\d{4,}/g, function(m){ return fmt(+m, dg); }));
+  }
+  function clip(str, n){ return str.length > n ? str.slice(0, Math.max(1, n - 1)) + "…" : str; }
+  var longest = 0;
+  nodes.forEach(function(n){ longest = Math.max(longest, svgLabel(String(n.label != null ? n.label : n.id)).length, valText(n.value).length); });
+  var W = 560, H, pos = [], svg, nw = Math.max(96, Math.min(150, longest * 6.6 + 18)), nh = 46, GAP = 88;
+  var maxw = 0; edges.forEach(function(e){ if (isNum(e.weight)) maxw = Math.max(maxw, Math.abs(e.weight)); });
+  if (layered){
+    var L = {}; layer.forEach(function(l, i){ (L[l] = L[l] || []).push(i); });
+    var keys = Object.keys(L).map(Number).sort(function(a,b){return a-b;}), maxRow = 0;
+    keys.forEach(function(k){ maxRow = Math.max(maxRow, L[k].length); });
+    W = Math.max(560, keys.length * nw + (keys.length - 1) * GAP + 20);
+    H = Math.max(140, maxRow * (nh + 26) + 24);
+    keys.forEach(function(k, ci){ var col = L[k]; col.forEach(function(i, ri){ pos[i] = {x: keys.length === 1 ? W/2 : 10 + nw/2 + (W - 20 - nw) * ci / (keys.length - 1), y: (H / (col.length + 1)) * (ri + 1)}; }); });
+  } else {
+    H = 340; var R = 125; nw = Math.min(nw, 110); nh = 42;
+    nodes.forEach(function(n, i){ var a = -Math.PI/2 + 2*Math.PI*i/Math.max(nodes.length,1); pos[i] = {x: W/2 + R*1.5*Math.cos(a), y: H/2 + R*Math.sin(a)}; });
+  }
+  svg = svgRoot(W, H, o.label);
+  var mid = "m" + Math.random().toString(36).slice(2), defs = s("defs"), mk = s("marker",{id:mid, viewBox:"0 0 10 10", refX:9, refY:5, markerWidth:9, markerHeight:9, markerUnits:"userSpaceOnUse", orient:"auto-start-reverse"});
+  mk.appendChild(s("path",{d:"M0 0L10 5L0 10z", fill:"var(--muted)"})); defs.appendChild(mk); svg.appendChild(defs);
+  var labels = [];
+  edges.forEach(function(e){
+    var a = pos[idx[e.from]], b = pos[idx[e.to]]; if (!a || !b || a === b) return;
+    var wv = isNum(e.weight) ? e.weight : (isNum(e.value) ? e.value : null), sw = wv !== null && maxw > 0 ? 1 + 6 * Math.abs(wv) / maxw : 1.6;
+    var d, lx, ly;
+    if (layered){ var ax = a.x + nw/2, bx = b.x - nw/2, cx = (ax + bx)/2; d = "M"+ax+" "+a.y+" C"+cx+" "+a.y+" "+cx+" "+b.y+" "+bx+" "+b.y; lx = cx; ly = a.y + (b.y - a.y) * 0.5 - 5; }
+    else { var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx*dx+dy*dy)||1, ux = dx/len, uy = dy/len, off = 6; var sx = a.x + ux*nw/2 - uy*off, sy = a.y + uy*nh/2 + ux*off, ex = b.x - ux*nw/2 - uy*off, ey = b.y - uy*nh/2 + ux*off; d = "M"+sx+" "+sy+" L"+ex+" "+ey; lx = (sx+ex)/2 - uy*10; ly = (sy+ey)/2 + ux*10; }
+    svg.appendChild(s("path",{d:d, fill:"none", stroke:"var(--bar)", "stroke-opacity":0.55, "stroke-width":sw, "marker-end":"url(#"+mid+")"}));
+    var lab = e.label != null ? svgLabel(String(e.label)) : (wv !== null ? fmt(wv, dg) : null);
+    if (lab){
+      // avoid stacking two labels on the same spot
+      labels.forEach(function(q){ if (Math.abs(q.x - lx) < 40 && Math.abs(q.y - ly) < 13) ly = q.y + 14; });
+      labels.push({x:lx, y:ly, t:clip(lab, Math.floor((layered ? GAP : 90) / 6))});
+    }
+  });
+  nodes.forEach(function(n, i){
+    var p = pos[i]; if (!p) return;
+    var g = s("g"), full = String(n.label != null ? n.label : n.id) + (n.value != null ? ": " + valText(n.value) : "");
+    g.appendChild(s("title", null, full));
+    g.appendChild(s("rect",{x:p.x - nw/2, y:p.y - nh/2, width:nw, height:nh, rx:10, fill:"var(--card)", stroke: n.highlight ? "var(--bar2)" : "var(--bar)", "stroke-width": n.highlight ? 3 : 1.6}));
+    var maxc = Math.floor((nw - 12) / 6.4);
+    g.appendChild(s("text",{x:p.x, y:p.y + (n.value != null ? -3 : 4), "text-anchor":"middle", "font-size":12, "font-weight":600}, clip(svgLabel(String(n.label != null ? n.label : n.id)), maxc)));
+    if (n.value != null) g.appendChild(s("text",{x:p.x, y:p.y + 13, "text-anchor":"middle", "font-size":11, "class":"muted"}, clip(valText(n.value), maxc + 2)));
+    svg.appendChild(g);
+  });
+  // edge labels last, so boxes never cover them
+  labels.forEach(function(q){ svg.appendChild(s("text",{x:q.x, y:q.y, "text-anchor":"middle", "font-size":11, "font-weight":600, stroke:"var(--card)", "stroke-width":4, "paint-order":"stroke"}, q.t)); });
+  return svg;
+}
+var drawFns = {};
+function drawCustom(v, o){
+  var cv = h("canvas",{width:1120, height:520});
+  try {
+    var fn = drawFns[o.id] || (drawFns[o.id] = new Function('"use strict";\n' + o.draw + '\n;return draw;')());
+    var ctx = cv.getContext("2d"); ctx.scale(2, 2);
+    var css = getComputedStyle(document.documentElement);
+    fn(ctx, 560, 260, v, clone(state), {ink:css.getPropertyValue("--ink").trim(), accent:css.getPropertyValue("--bar").trim(), accent2:css.getPropertyValue("--bar2").trim(), muted:css.getPropertyValue("--muted").trim(), grid:css.getPropertyValue("--grid").trim()});
+  } catch(e){ return h("div",{"class":"help",text:"Custom drawing failed: " + e.message}); }
+  return cv;
+}
+function scalarParts(v){ if (v && typeof v === "object") return {val:v.value, unit:v.unit, note:v.note}; return {val:v}; }
+
+var lastOut = null;
+function renderOutputs(out){
+  var list = outputList(out), sc = $("scalars"), vs = $("visuals");
+  sc.innerHTML = ""; vs.innerHTML = "";
+  // long vectors: if one is an evenly spaced axis (e.g. time samples) and another has the same length, plot against it
+  var longs = list.filter(function(o){ return o.type === "vector" && Array.isArray(out[o.id]) && out[o.id].length > 30; });
+  var axisO = null;
+  longs.forEach(function(o){ if (!axisO && isAxis(out[o.id]) && longs.some(function(q){ return q !== o && out[q.id].length === out[o.id].length && !isAxis(out[q.id]); })) axisO = o; });
+  list.forEach(function(o){
+    var v = out[o.id];
+    if (axisO && o === axisO) return;
+    if (v === undefined) return;
+    if (o.type === "scalar"){
+      var p = scalarParts(v), d = isNum(o.digits) ? o.digits : 3;
+      var card = h("div",{"class":"scalar", title: o.desc || ""}, h("div",{"class":"k", html:o.label_html || esc(o.label || o.id)}), h("div",null, h("span",{"class":"v", text:fmt(p.val, d)}), h("span",{"class":"u", text: p.unit || o.unit || ""})));
+      if (isNum(o.min) && isNum(o.max) && isNum(p.val)){ var u = Math.max(0, Math.min(1, (p.val - o.min) / ((o.max - o.min) || 1))); var g = h("div",{"class":"gauge"}), bar = h("i"); bar.style.width = (u*100).toFixed(1) + "%"; g.appendChild(bar); card.appendChild(g); }
+      if (p.note) card.appendChild(h("div",{"class":"k", text:p.note}));
+      sc.appendChild(card);
+      return;
+    }
+    var box = h("div",{"class":"vis"}), title = h("h3",null, h("span",{html:o.label_html || esc(o.label || o.id)}));
+    box.appendChild(title);
+    if (o.caption_html) box.appendChild(h("p",{"class":"cap", html:o.caption_html}));
+    var node;
+    try {
+      if (o.type === "vector" && Array.isArray(v) && v.length > 30) node = drawLongVector(v, o, axisO && out[axisO.id].length === v.length ? {values: out[axisO.id], label: axisO.label, id: axisO.id} : null);
+      else if (o.type === "vector" && Array.isArray(v)) node = drawVector(v, o, out);
+      else if (o.type === "matrix" && Array.isArray(v)) node = drawMatrix(v, o, out);
+      else if (o.type === "series" && v && v.x) node = drawSeries(v, o);
+      else if (o.type === "table" && v && v.rows) node = drawTable(v, o);
+      else if (o.type === "flow" && v && v.nodes) node = drawFlow(v, o);
+      else if (o.type === "custom" && o.draw) node = drawCustom(v, o);
+      else node = h("pre",{"class":"help", text: JSON.stringify(v)});
+    } catch(e){ node = h("div",{"class":"help", text:"Could not draw this view: " + e.message}); }
+    box.appendChild(node);
+    vs.appendChild(box);
+  });
+}
+function lookup(path, out){
+  var m = /^([A-Za-z_]\w*)((?:\[\d+\])*)(?::(\d))?$/.exec(path);
+  if (!m) return {v:undefined};
+  var base = m[1] in out ? out[m[1]] : state[m[1]];
+  if (base && typeof base === "object" && !Array.isArray(base) && "value" in base) base = base.value;
+  var idxs = (m[2].match(/\d+/g) || []).map(Number);
+  for (var i = 0; i < idxs.length && base != null; i++) base = base[idxs[i]];
+  return {v:base, d: m[3] !== undefined ? +m[3] : null};
+}
+function updateLive(out){
+  document.querySelectorAll("[data-ph]").forEach(function(el){ var r = lookup(el.getAttribute("data-ph"), out); el.textContent = fmt(r.v, r.d !== null ? r.d : 3); });
+}
+function renderAllValues(out){
+  var tb = $("allvals"); if (!tb) return; tb.innerHTML = "";
+  var names = {}; DECL.concat(Object.keys(DYN).map(function(k){ return DYN[k]; })).forEach(function(o){ if (o && o.id) names[o.id] = o.label_html || esc(o.label || o.id); });
+  var rows = 0;
+  tb.appendChild(h("thead",null,h("tr",null,h("th",{text:"Quantity"}),h("th",{text:"Current value"}))));
+  var body = h("tbody");
+  Object.keys(out).forEach(function(k){
+    if (SKIP[k] || k.charAt(0) === "_") return;
+    var v = out[k], txt = null;
+    if (v && typeof v === "object" && !Array.isArray(v) && "value" in v) v = v.value;
+    if (isNum(v) || typeof v === "boolean" || typeof v === "string") txt = typeof v === "string" ? v : fmt(v, 4);
+    else if (Array.isArray(v) && v.every(isNum)) txt = "[" + v.slice(0, 10).map(function(x){ return fmt(x, 4); }).join(", ") + (v.length > 10 ? ", … (" + v.length + " values)" : "") + "]";
+    else if (Array.isArray(v) && v.every(Array.isArray)) txt = v.length + " × " + (v[0] ? v[0].length : 0) + " matrix: " + v.slice(0, 4).map(function(r){ return "[" + r.slice(0, 6).map(function(x){ return fmt(x, 3); }).join(", ") + "]"; }).join(" ") + (v.length > 4 ? " …" : "");
+    if (txt === null) return;
+    body.appendChild(h("tr",null,h("td",{html: names[k] || mathText(k)}),h("td",{text: txt})));
+    rows++;
+  });
+  tb.appendChild(body);
+  $("allvals-wrap").classList.toggle("hidden", rows === 0);
+}
+function run(){
+  var out;
+  try { out = evalCompute(state); lastOut = out; errBox(null); }
+  catch(e){ errBox("Calculation error: " + e.message + (lastOut ? " (showing the last valid result)" : "")); out = lastOut; }
+  if (!out) return;
+  if (out.warning) errBox("Note: " + out.warning);
+  var ins = out.insight;
+  $("insight").classList.toggle("hidden", !ins);
+  $("insight").innerHTML = ins ? mathText(String(ins)) : "";
+  renderOutputs(out);
+  updateLive(out);
+  renderAllValues(out);
+}
+
+/* ---------- steps ---------- */
+if (S.steps && S.steps.length){
+  S.steps.forEach(function(st){ var li = h("li",null, h("div",{html:st.html})); if (st.note_html) li.appendChild(h("div",{"class":"note", html:st.note_html})); $("steps").appendChild(li); });
+} else $("sec-steps").classList.add("hidden");
+
+/* ---------- explorations ---------- */
+function describeSet(set){
+  return Object.keys(set || {}).map(function(k){
+    var c = CTL.filter(function(z){ return z.id === k; })[0];
+    var name = c ? (c.label_html || esc(c.label || k)) : esc(k), v = set[k];
+    if (c && c.type === "select" && c.options){ var o = c.options.filter(function(op){ return (op && typeof op === "object" ? op.value : op) === v; })[0]; if (o && typeof o === "object" && o.label) v = o.label; }
+    return name + " = " + esc(Array.isArray(v) ? JSON.stringify(v) : fmt(v, 4));
+  }).join(";  ");
+}
+function flash(ids){ ids.forEach(function(id){ var e = $("ctl-" + id); if (!e) return; e.classList.add("flash"); setTimeout(function(){ e.classList.remove("flash"); }, 1600); }); }
+if (S.explorations && S.explorations.length){
+  S.explorations.forEach(function(ex, i){
+    var card = h("div",{"class":"ex"});
+    card.appendChild(h("h3",{text:"Exercise " + (i + 1) + ". " + (ex.title || "")}));
+    if (ex.predict_html){ card.appendChild(h("div",{"class":"lbl",text:"Predict."})); card.appendChild(h("div",{html:ex.predict_html})); }
+    if (ex.set && Object.keys(ex.set).length){ card.appendChild(h("div",{"class":"lbl",text:"Set up."})); card.appendChild(h("div",{"class":"set", html:describeSet(ex.set)})); }
+    var rev = h("div",{"class":"reveal"});
+    if (ex.observe_html){ rev.appendChild(h("div",{"class":"lbl",text:"Observe."})); rev.appendChild(h("div",{html:ex.observe_html})); }
+    if (ex.why_html){ rev.appendChild(h("div",{"class":"lbl",text:"Why."})); rev.appendChild(h("div",{html:ex.why_html})); }
+    var chk = h("div",{"class":"check"}); rev.appendChild(chk);
+    var go = h("button",{type:"button", text:"Try it"}), rs = h("button",{type:"button", "class":"ghost", text:"Reset"});
+    go.addEventListener("click", function(){
+      state = applySet(resize(clone(defaults)), clone(ex.set || {}));
+      refreshAll(); run(); flash(Object.keys(ex.set || {}));
+      card.classList.add("done");
+      var ok = ex.expect ? evalExpr(ex.expect, lastOut || {}, state) : null;
+      chk.className = "check" + (ok === true ? " ok" : ok === false ? " bad" : "");
+      chk.textContent = ok === true ? "✓ The calculation shows the expected result." : ok === false ? "⚠ The result differs from what was expected — look closely at the values." : "";
+      if (window.matchMedia("(max-width:820px)").matches) $("sec-pg").scrollIntoView({behavior:"smooth"});
+    });
+    rs.addEventListener("click", function(){ resetAll(); card.classList.remove("done"); });
+    card.appendChild(h("div",{"class":"btns"}, go, rs));
+    card.appendChild(rev);
+    $("explore").appendChild(card);
+  });
+} else $("sec-ex").classList.add("hidden");
+
+/* ---------- build + self tests ---------- */
+var cbox = $("controls");
+CTL.forEach(function(c){ cbox.appendChild(buildControl(c)); });
+cbox.appendChild(h("button",{type:"button", "class":"ghost", text:"Reset all inputs", onclick:resetAll}));
+state = resize(clone(defaults));
+try { baseOut = evalCompute(state); } catch(e){ baseOut = null; }
+refreshAll();
+run();
+
+var tests = (S.self_tests || []).filter(function(t){ return t && t.expect; });
+if (tests.length){
+  tests.forEach(function(t){
+    var ok = null;
+    try { var x = applySet(resize(clone(defaults)), clone(t.set || {})); ok = evalExpr(t.expect, evalCompute(x), x); } catch(e){ ok = false; }
+    $("tests").appendChild(h("li",{html:(ok ? "✓ " : "✗ ") + mathText(t.name || t.expect)}));
+  });
+} else $("tests-wrap").classList.add("hidden");
+window.__P2P = {state:function(){return clone(state);}, out:function(){return lastOut;}, ready:true};
+})();
+</script>
+<style>
+  #toc-side{position:fixed;top:0;left:0;bottom:0;width:250px;overflow-y:auto;
+    padding:64px 12px 20px;background:var(--card);border-right:1px solid var(--line);
+    font:15px/1.35 var(--serif);z-index:60;transform:translateX(-100%);transition:transform .25s ease}
+  body.toc-open #toc-side{transform:none}
+  body{transition:padding-left .25s ease}
+  @media (min-width:900px){ body.toc-open{padding-left:250px} }
+  #toc-btn{position:fixed;top:12px;left:12px;z-index:70;padding:6px 12px;border-radius:6px;
+    border:1px solid var(--line);background:var(--card);color:var(--ink);font:14px var(--serif);cursor:pointer}
+  #toc-btn:hover{border-color:var(--accent);color:var(--accent)}
+  #toc-side .toc-title{font-variant:small-caps;letter-spacing:.06em;color:var(--muted);
+    padding:0 8px 8px;border-bottom:1px solid var(--line);margin-bottom:6px}
+  #toc-side a{display:block;padding:6px 8px;border-radius:5px;color:var(--ink);text-decoration:none;
+    opacity:.75;border-left:3px solid transparent}
+  #toc-side a:hover{opacity:1;background:var(--accent-soft)}
+  #toc-side a.active{opacity:1;color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft)}
+  section.card{scroll-margin-top:16px}
+  html{scroll-behavior:smooth}
+  @media print{#toc-side,#toc-btn{display:none} body.toc-open{padding-left:0}}
+</style>
+<script>
+(function(){
+  var secs=[].slice.call(document.querySelectorAll('section.card')).filter(function(s){
+    return s.id && !s.classList.contains('hidden') && s.offsetParent!==null && s.querySelector('h2');});
+  if(secs.length<2) return;
+  var nav=document.createElement('nav'); nav.id='toc-side'; nav.setAttribute('aria-label','Sections');
+  var t=document.createElement('div'); t.className='toc-title'; t.textContent='Contents'; nav.appendChild(t);
+  secs.forEach(function(s){
+    var h2=s.querySelector('h2').cloneNode(true);
+    [].slice.call(h2.querySelectorAll('.num, #eq-badge, .badge')).forEach(function(n){n.remove();});
+    var a=document.createElement('a'); a.href='#'+s.id;
+    a.textContent=h2.textContent.replace(/\s+/g,' ').trim();
+    a.addEventListener('click',function(){ if(window.innerWidth<900) setOpen(false); });
+    nav.appendChild(a);});
+  var btn=document.createElement('button'); btn.id='toc-btn'; btn.type='button';
+  btn.setAttribute('aria-controls','toc-side');
+  document.body.appendChild(nav); document.body.appendChild(btn);
+  function setOpen(o){ document.body.classList.toggle('toc-open',o);
+    btn.textContent=o?'✕ Close':'☰ Contents'; btn.setAttribute('aria-expanded',o); }
+  btn.addEventListener('click',function(){ setOpen(!document.body.classList.contains('toc-open')); });
+  setOpen(window.innerWidth>=900);
+  if(!('IntersectionObserver' in window)) return;
+  var obs=new IntersectionObserver(function(es){es.forEach(function(e){
+    if(e.isIntersecting){[].slice.call(nav.querySelectorAll('a')).forEach(function(l){l.classList.remove('active');});
+      var a=nav.querySelector('a[href="#'+e.target.id+'"]'); if(a) a.classList.add('active');}});
+  },{rootMargin:'-25% 0px -65% 0px'});
+  secs.forEach(function(s){obs.observe(s);});
+})();
+</script>
+</body>
+</html>

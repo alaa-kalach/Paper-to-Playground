@@ -1,0 +1,19 @@
+{"seq": 0, "t": 0.0, "stage": "start", "action": "config", "result": "ok", "model": "deepseek/deepseek-v4.1-flash", "max_calls": 5, "max_completion": 14000, "deadline_s": 420, "mock": false}
+{"seq": 1, "t": 0.0, "stage": "input", "action": "read_case", "result": "ok", "source_url": "https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf", "focus_chars": 384, "audience": "Engineering undergraduate"}
+{"seq": 2, "t": 0.001, "stage": "generate", "action": "build_prompt", "result": "ok", "system_chars": 8760, "user_chars": 537}
+{"seq": 3, "t": 7.49, "stage": "generate", "action": "llm_call", "result": "ok", "call_no": 1, "attempt": 1, "http_status": 200, "generation_id": "gen-1791036444-cURXGmktSAT29ddPyvjp", "model": "deepseek/deepseek-v4.1-flash", "prompt_tokens": 2353, "completion_tokens": 2381, "reasoning_tokens": 0, "cached_tokens": 2176, "cost": 0.002923356, "elapsed_s": 7.489, "max_tokens": 4000, "finish_reason": "stop", "json_mode": true, "reasoning_mode": "off", "provider": "Together", "provider_sort": "throughput", "prompt_chars": 9297, "completion_chars": 7615, "budget": {"calls": 1, "prompt_tokens": 2353, "completion_tokens": 2381, "reasoning_tokens": 0, "cached_tokens": 2176, "total_tokens": 4734, "elapsed_s": 7.49}}
+{"seq": 4, "t": 7.491, "stage": "generate", "action": "parse_json", "result": "ok", "method": "plain", "keys": ["claims", "compute", "context", "controls", "equation", "explorations", "hook", "intuition", "limitation", "misconception", "outcomes", "outputs", "paper", "self_tests", "steps", "symbols", "takeaways", "title"]}
+{"seq": 5, "t": 7.526, "stage": "check", "action": "check:c1_schema", "result": "pass", "attempt": 1, "failures": []}
+{"seq": 6, "t": 7.526, "stage": "check", "action": "check:c2_outcomes", "result": "pass", "attempt": 1, "failures": []}
+{"seq": 7, "t": 7.526, "stage": "check", "action": "check:c3_compute", "result": "pass", "attempt": 1, "failures": []}
+{"seq": 8, "t": 7.526, "stage": "check", "action": "check:c4_edges", "result": "pass", "attempt": 1, "failures": []}
+{"seq": 9, "t": 7.526, "stage": "check", "action": "check:c5_sensitivity", "result": "pass", "attempt": 1, "failures": []}
+{"seq": 10, "t": 7.526, "stage": "check", "action": "check:c6_selftests", "result": "pass", "attempt": 1, "failures": []}
+{"seq": 11, "t": 7.526, "stage": "check", "action": "check:c7_explorations", "result": "pass", "attempt": 1, "failures": []}
+{"seq": 12, "t": 7.526, "stage": "check", "action": "check:c8_equation", "result": "pass", "attempt": 1, "failures": []}
+{"seq": 13, "t": 7.526, "stage": "check", "action": "check:c9_latex", "result": "pass", "attempt": 1, "failures": []}
+{"seq": 14, "t": 7.526, "stage": "check", "action": "checks_summary", "result": "pass", "attempt": 1, "n_major": 0, "n_minor": 0, "usable": true, "stats": {"focus_keyword_coverage": 0.75, "default_outputs": {"H": 1.8464393446710157}, "edge_runs": 7, "dead_controls": [], "self_tests": [{"name": "Entropy is nonnegative", "pass": true}, {"name": "Contributions sum to entropy", "pass": true}, {"name": "Zero probability contributes nothing", "pass": true}, {"name": "Uniform distribution maximizes entropy for given n", "pass": true}], "explorations": [{"i": 1, "pass": true}, {"i": 2, "pass": true}], "check_seconds": 0.034}}
+{"seq": 15, "t": 7.526, "stage": "finalize", "action": "sanitize", "result": "verified", "notes": []}
+{"seq": 16, "t": 7.538, "stage": "render", "action": "check:c9_page", "result": "pass", "renderer": "template", "failures": []}
+{"seq": 17, "t": 7.539, "stage": "output", "action": "write_index_html", "result": "ok", "kind": "verified/template", "bytes": 81859}
+{"seq": 18, "t": 7.539, "stage": "end", "action": "exit", "result": "ok", "exit_code": 0, "totals": {"calls": 1, "prompt_tokens": 2353, "completion_tokens": 2381, "reasoning_tokens": 0, "cached_tokens": 2176, "total_tokens": 4734, "elapsed_s": 7.539}, "page_written": true}
