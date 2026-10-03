@@ -10,3 +10,5 @@ RULES
 - Keep the same control ids, output ids and format as the original spec.
 - Never compare against rounded constants; use the exact expression with approx().
 - Never weaken a test just to make it pass. If the real numbers show the calculation is scientifically wrong, fix "compute".
+- If you change an exploration's "set" or "expect", update its "observe" and "why" so the text matches the new numbers.
+- For other errors (NaN, a control with no effect, invalid LaTeX, missing or malformed fields), fix exactly the field named in the error.
