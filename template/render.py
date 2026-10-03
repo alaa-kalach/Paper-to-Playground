@@ -101,10 +101,59 @@ def text_html(s, warnings: list[str], where: str = "") -> str:
 
 
 def _esc_text(t: str) -> str:
+    out, last = [], 0
+    for m in PH_RE.finditer(t):  # keep {{placeholders}} intact, typeset the prose around them
+        out.append(_prose(t[last:m.start()]))
+        out.append(f'<b class="live" data-ph="{html.escape(m.group(1), quote=True)}">…</b>')
+        last = m.end()
+    out.append(_prose(t[last:]))
+    return "".join(out)
+
+
+def _prose(t: str) -> str:
     t = html.escape(t.replace("\\$", "$"))
     t = ITAL_RE.sub(r"<i>\1</i>", BOLD_RE.sub(r"<b>\1</b>", t))
-    # live placeholders in plain text too
-    return PH_RE.sub(lambda m: f'<b class="live" data-ph="{html.escape(m.group(1), quote=True)}">…</b>', t)
+    return _typeset(t)
+
+
+# ---- plain-text labels written in ASCII math (p_i, QK^T, sqrt(d_k), log2) -> textbook HTML
+_SUB_RE = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z\u0391-\u03C9]{1,3})_(?:\{([^{}]{1,12})\}|([A-Za-z0-9]{1,4}|[+\-]))(?![A-Za-z0-9_])")
+_SUP_RE = re.compile(r"(?<=[A-Za-z0-9)\]>])\^(?:\{([^{}]{1,12})\}|(-?[A-Za-z0-9]{1,3}))")
+_SQRT_RE = re.compile(r"\bsqrt\(([^()]{1,30})\)")
+_LOG_RE = re.compile(r"\blog(2|10)\b")
+_MINUS_RE = re.compile(r"(^|[\s(=])-(?=[^\s\-.,;:])")
+
+
+def _v(x: str) -> str:
+    return f"<i>{x}</i>" if len(x) == 1 and x.isalpha() else x
+
+
+def _typeset(t: str) -> str:
+    """Typeset ASCII math (p_i, x^2, sqrt(d), log2, -p) in already-escaped text."""
+    t = _SQRT_RE.sub(lambda m: '&radic;<span class="ovl">' + m.group(1) + "</span>", t)
+    t = _LOG_RE.sub(r"log<sub>\1</sub>", t)
+    t = re.sub(r"(?<=[0-9)])\s?\*\s?(?=[0-9(])", "&times;", t)
+    t = _MINUS_RE.sub(lambda m: m.group(1) + "&minus;", t)
+
+    def _sub(m):
+        base, sub = m.group(1), (m.group(2) or m.group(3))
+        if m.group(3) and len(base) > 1 and len(sub) > 1:  # looks like a code name (row_sums), leave it
+            return m.group(0)
+        return _v(base) + "<sub>" + ("".join(_v(c) for c in sub) if len(sub) == 1 else sub) + "</sub>"
+
+    t = _SUB_RE.sub(_sub, t)
+    t = _SUP_RE.sub(lambda m: "<sup>" + (m.group(1) or m.group(2)).replace("-", "&minus;") + "</sup>", t)
+    return t
+
+
+def label_html(s, warnings: list[str] | None = None) -> str:
+    """Escape a short label and typeset ASCII math in it. $...$ segments become MathML."""
+    if s is None:
+        return ""
+    s = str(s)
+    if "$" in s or "\\(" in s:
+        return text_html(s, warnings if warnings is not None else [], "label")
+    return _typeset(html.escape(s))
 
 
 # ------------------------------------------------------------- normalisation
@@ -247,6 +296,13 @@ def build_view(spec: dict) -> tuple[dict, list[str]]:
         "hook_html": text_html(spec.get("hook"), w, "hook"),
         "hide_undeclared": bool(spec.get("hide_undeclared", False)),
     }
+    eqlab = view["paper"]["equation"]
+    if eqlab and (re.search(r"[\\^_=]", eqlab) or len(eqlab) > 25):  # a formula, not a label like "Eq. (1)"
+        w.append(f"paper.equation looks like a formula, not a label; dropped: {eqlab[:60]}")
+        view["paper"]["equation"] = None
+    sec = view["paper"]["section"]
+    if sec and re.fullmatch(r"\d+(\.\d+)*", sec.strip()):
+        view["paper"]["section"] = "Section " + sec.strip()
     url = view["paper"]["url"]
     if url and not re.match(r"^https?://", url):
         view["paper"]["url"] = None
@@ -284,6 +340,7 @@ def build_view(spec: dict) -> tuple[dict, list[str]]:
             if c["type"] == "select" and c.get("options"):
                 o = c["options"][0]
                 c["default"] = o.get("value") if isinstance(o, dict) else o
+        c["label_html"] = label_html(c.get("label") or c["id"], w)
         view["controls"].append(c)
 
     view["outputs"] = []
@@ -294,6 +351,7 @@ def build_view(spec: dict) -> tuple[dict, list[str]]:
         if o.get("type") and o["type"] not in OUTPUT_TYPES:
             w.append(f"outputs[{i}] type {o['type']!r} unknown; will infer from data")
             o.pop("type")
+        o["label_html"] = label_html(o.get("label") or o["id"], w)
         if o.get("caption"):
             o["caption_html"] = text_html(o.pop("caption"), w, f"outputs[{i}].caption")
         view["outputs"].append(o)
