@@ -76,15 +76,8 @@ class Sandbox:
         """Evaluate a boolean JS assertion expression. Returns (bool, error_or_None)."""
         if not isinstance(expr, str) or not expr.strip():
             return False, "empty expression"
-        expr = normalize_expect(expr)
-        # models often write bare names (approx(H, 0)) instead of out.H: expose outputs and inputs directly
-        reserved = {"out", "inp", "base", "approx", "sum", "max", "min", "all", "Math", "true", "false", "null"}
-        decl = ""
-        for src, d in (("out", out), ("inp", inp)):
-            for k in (d or {}):
-                if IDENT_RE.match(k) and k not in reserved and f"var {k} =" not in decl:
-                    decl += f"var {k} = {src}[{json.dumps(k)}];"
-        js = ("(function(out, inp, base){ " + decl + " return !!(" + expr + "); })("
+        body = wrap_expect(expr, list(out or {}), list(inp or {}))
+        js = ("(function(out, inp, base){ return !!(" + body + "); })("
               + json.dumps(out) + "," + json.dumps(inp) + "," + json.dumps(base) + ")")
         try:
             return bool(self.ctx.eval(js)), None
@@ -96,6 +89,25 @@ class Sandbox:
 
 
 _SIMPLE_EQ = re.compile(r"^\s*([^=!<>&|?]+?)\s*={1,3}\s*([^=!<>&|?]+?)\s*$")
+
+
+_RESERVED = {"out", "inp", "base", "approx", "sum", "max", "min", "all", "Math", "true", "false", "null",
+             "inputs", "o", "x", "undefined", "NaN", "Infinity"}
+
+
+def wrap_expect(expr, out_keys, inp_keys):
+    """Canonical, self-contained assertion usable both in QuickJS and in the page's evaluator
+    (which provides out, inp, base, approx, sum, max, min, all). Bare names like H become out["H"]."""
+    e = normalize_expect(expr)
+    decl, seen = "", set()
+    for src, keys in (("out", out_keys), ("inp", inp_keys)):
+        for k in keys:
+            if IDENT_RE.match(k) and k not in _RESERVED and k not in seen and re.search(r"(?<![.\w$])" + re.escape(k) + r"\b", e):
+                seen.add(k)
+                decl += f"var {k} = {src}[{json.dumps(k)}]; "
+    if not decl:
+        return e
+    return "(function(){ " + decl + "return (" + e + "); })()"
 
 
 def normalize_expect(expr):

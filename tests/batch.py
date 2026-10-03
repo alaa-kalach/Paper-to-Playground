@@ -24,7 +24,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
     ap.add_argument("--runs", type=int, default=2)
-    ap.add_argument("--cases", nargs="+", default=["cases", "cases/practice"])
+    ap.add_argument("--cases", nargs="+", default=["cases"])
     a = ap.parse_args()
     files = sorted(p for d in a.cases for p in (ROOT / d).glob("*.json"))
     rows = []

@@ -37,6 +37,15 @@ def sanitize(spec, report):
             notes.append(f"hid {len(s['outputs']) - len(good)} broken outputs")
         s["outputs"] = good
 
+    # make asserts self-contained so the page's own evaluator (B) gets the same verdict as our checker
+    from .jsrun import wrap_expect
+    oks = [o.get("id") for o in s.get("outputs") or [] if isinstance(o, dict) and o.get("id")]
+    iks = [c.get("id") for c in s.get("controls") or [] if isinstance(c, dict) and c.get("id")]
+    for key in ("explorations", "self_tests"):
+        for it in s.get(key) or []:
+            if isinstance(it, dict) and isinstance(it.get("expect"), str) and it["expect"].strip():
+                it["expect"] = wrap_expect(it["expect"], oks, iks)
+
     # defaults for missing text so the template never sees None
     for k, v in {"hook": "", "limitation": "This simplified demonstration uses small toy inputs.",
                  "misconception": "", "symbols": [], "steps": [], "claims": [], "explorations": []}.items():

@@ -733,7 +733,7 @@ def check_page(html, case=None):
     # every <script> opened must be closed exactly once -> detects unescaped </script> in embedded JSON
     if low.count("<script") != low.count("</script>"):
         fl.append(F("c9_page", "unbalanced <script> tags (unescaped </script> inside embedded data?)", ["render"]))
-    if "<math" not in low:
+    if "<math" not in low and "\\u003cmath" not in low:
         fl.append(F("c9_page", "no MathML found: equations not converted", ["render"], "minor"))
     if "<!doctype html" not in low[:200]:
         fl.append(F("c9_page", "missing <!doctype html>", ["render"], "minor"))
