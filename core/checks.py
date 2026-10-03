@@ -176,9 +176,10 @@ def _fix_set_values(s, fixes):
                 if nums:
                     lo, hi = min(nums), max(nums)
                     span = (c["max"] - c["min"]) or 1
-                    if lo < c["min"] and c["min"] - lo <= 2 * span:
+                    lim = (10 if t == "slider" else 2) * span
+                    if lo < c["min"] and c["min"] - lo <= lim:
                         fixes.append(f"{k}: min {c['min']} -> {lo} (used in {key})"); c["min"] = lo
-                    if hi > c["max"] and hi - c["max"] <= 2 * span:
+                    if hi > c["max"] and hi - c["max"] <= lim:
                         fixes.append(f"{k}: max {c['max']} -> {hi} (used in {key})"); c["max"] = hi
 
 
@@ -647,6 +648,13 @@ class CheckRun:
                     same = _close(_declared(self.sb.run(inp), self.s), self.base)
                 except JSError:
                     pass
+            if same and not getattr(self, "_same_used", False):
+                ok0, _ = self._assert(label, e.get("set") or {}, e["expect"], ["explorations"])
+                if ok0:  # a single "look at the starting point" exploration is acceptable teaching
+                    self._same_used = True
+                    self.add(F("c7_explorations", f"{label}: 'set' equals the defaults (observes the starting state)",
+                               ["explorations"], "minor"))
+                    res.append({"i": i + 1, "pass": True}); continue
             if same:
                 cur = {k: defaults(self.s).get(k) for k in (e.get("set") or {})}
                 self.add(F("c7_explorations", f"{label}: its 'set' {json.dumps(e.get('set'))[:120]} produces exactly the "

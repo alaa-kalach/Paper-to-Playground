@@ -15,6 +15,7 @@ SCENARIOS = [  # (name, mock files, case, expected exit, expected page kind pref
     ("garbage -> emergency ok", M + "garbage.txt," + M + "garbage.txt,specs/entropy.json", "cases/example_b.json", 0, "emergency"),
     ("bare names + dead control", M + "live_like.json", "cases/example_b.json", 0, "verified"),
     ("control matters only w/ mode", M + "interaction.json", "cases/example_b.json", 0, "verified"),
+    ("bool scalar + default expl.", M + "batch2.json", "cases/example_b.json", 0, "verified"),
     ("all garbage -> static", ",".join([M + "garbage.txt"] * 4), "cases/example_b.json", 1, "static"),
 ]
 

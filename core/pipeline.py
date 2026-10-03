@@ -151,11 +151,35 @@ class Agent:
         t = time.monotonic()
         report = run_checks(spec, self.case)
         report["stats"]["check_seconds"] = round(time.monotonic() - t, 3)
+        spec, report = self._bool_scalars(spec, report, stage, attempt)
         spec, report = self._prune_dead_controls(spec, report, stage, attempt)
         _log_report(self.trace, stage, report, attempt)
         if self.best is None or _score(report) < _score(self.best[1]):
             self.best = (spec, report)
         return spec, report
+
+    def _bool_scalars(self, spec, report, stage, attempt):
+        """Free fix: scalar outputs returned as true/false are converted to 1/0 by wrapping compute."""
+        import re as _re
+        ids = sorted({m.group(1) for f in report["failures"] for m in
+                      [_re.search(r"output '([A-Za-z_$][\w$]*)' \(scalar\): scalar must be a number; got (true|false)", f["msg"])] if m})
+        if not ids:
+            return spec, report
+        s2 = dict(spec)
+        s2["compute"] = (spec["compute"] + "\nvar __compute_orig = compute;\ncompute = function(inputs){ var r = __compute_orig(inputs); "
+                         + "".join(f"if (r && typeof r[{json.dumps(k)}] === 'boolean') r[{json.dumps(k)}] = r[{json.dumps(k)}] ? 1 : 0; " for k in ids)
+                         + "return r; };")
+        outs = []
+        for o in s2.get("outputs") or []:
+            if isinstance(o, dict) and o.get("id") in ids:
+                o = dict(o, label=str(o.get("label") or o["id"]) + " (1 = yes, 0 = no)")
+            outs.append(o)
+        s2["outputs"] = outs
+        r2 = run_checks(s2, self.case)
+        accepted = r2["n_major"] < report["n_major"]
+        self.trace.event(stage, "autofix:bool_scalars", "accepted" if accepted else "rejected", attempt=attempt,
+                         outputs=ids, majors_before=report["n_major"], majors_after=r2["n_major"])
+        return (s2, r2) if accepted else (spec, report)
 
     def _prune_dead_controls(self, spec, report, stage, attempt):
         """Free fix (no API call): drop controls that never change an output if >=2 live controls remain."""
