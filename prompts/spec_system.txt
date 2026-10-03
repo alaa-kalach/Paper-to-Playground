@@ -9,6 +9,8 @@ CONTENT
 - limitation: specific to this mechanism and scientifically correct, not generic.
 - Exploration "why": explain the mechanism in 1-2 sentences using the equation, not just the result.
 - Each exploration's "set" must itself produce the effect it teaches (don't tell the learner to try something else instead).
+- Defaults must be a generic, uneven starting state (not a special case like all-equal or certain), so every exploration visibly changes the page.
+- Plain-text fields (hook, claims, observe, why, limitation, misconception, insight) must not contain LaTeX; write math with Unicode, e.g. H = −Σ pᵢ log₂ pᵢ.
 
 COMPUTE
 - "compute": "function compute(inputs){...}", plain deterministic JS, only Math. inputs: slider->number, toggle->boolean, select->string, vector->number[], matrix->number[][].
