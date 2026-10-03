@@ -1,0 +1,5 @@
+{
+ "source_url": "https://ieeexplore.ieee.org/document/1697831",
+ "focus": "Shannon's Communication in the Presence of Noise, Theorem 1 (sampling theorem): a signal band-limited to W Hz is determined by samples taken 1/(2W) seconds apart. Learners should sample a sinusoid, see that sampling below twice its frequency produces an alias at a lower apparent frequency, and compute the alias frequency.",
+ "audience": "second-year electrical engineering undergraduates"
+}

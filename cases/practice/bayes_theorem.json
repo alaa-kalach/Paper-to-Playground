@@ -1,0 +1,5 @@
+{
+ "source_url": "https://arxiv.org/abs/1006.1149",
+ "focus": "Bayes' theorem for a diagnostic test: P(D|+) = P(+|D)P(D) / P(+). Learners should compute the posterior from prevalence, sensitivity and specificity, and see why a rare condition gives a low posterior even with an accurate test (base-rate fallacy).",
+ "audience": "first-year engineering undergraduates"
+}

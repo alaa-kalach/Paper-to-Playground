@@ -1,0 +1,5 @@
+{
+ "source_url": "https://arxiv.org/abs/physics/0001051",
+ "focus": "RC circuit charging: v(t) = V(1 - e^{-t/RC}) with time constant tau = RC. Learners should see how R and C change the charging curve, find that v reaches about 63% of V at t = tau, and compute the current i(t).",
+ "audience": "first-year electrical engineering undergraduates"
+}

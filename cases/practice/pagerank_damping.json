@@ -1,0 +1,5 @@
+{
+ "source_url": "http://ilpubs.stanford.edu:8090/422/",
+ "focus": "Section 2.4 of The PageRank Citation Ranking: PR = (1-d)/N + d * sum over incoming links of PR(j)/L(j). Learners should compute PageRank by power iteration on a 4-page graph, see how the damping factor d changes the ranks, and check that ranks sum to 1.",
+ "audience": "third-year computer engineering undergraduates"
+}

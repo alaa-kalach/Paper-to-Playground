@@ -1,0 +1,5 @@
+{
+ "source_url": "https://arxiv.org/abs/1503.02531",
+ "focus": "Section 2 of Distilling the Knowledge in a Neural Network: softmax with temperature q_i = exp(z_i/T)/sum_j exp(z_j/T). Learners should compute probabilities from logits, see how raising T softens the distribution and lowering T sharpens it, and compare T=1 with high T.",
+ "audience": "third-year engineering undergraduates"
+}

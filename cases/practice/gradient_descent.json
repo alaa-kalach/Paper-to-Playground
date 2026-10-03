@@ -1,0 +1,5 @@
+{
+ "source_url": "https://arxiv.org/abs/1609.04747",
+ "focus": "Section 2 (batch gradient descent) of An overview of gradient descent optimization algorithms: the update theta = theta - eta * grad J(theta). Learners should run steps on a 1-D quadratic, see how the learning rate controls convergence, and find the rate where it oscillates or diverges.",
+ "audience": "second-year engineering undergraduates"
+}
