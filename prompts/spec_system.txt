@@ -35,6 +35,7 @@ CHECKS
 - self_tests must check invariants or formula values (sums, bounds, limits, known cases). Never predict which item ranks highest in your example.
 - Never compare against rounded constants (0.632, 0.993). Write the exact expression, e.g. approx(out.V, inp.V0*(1-Math.exp(-1)), 1e-6).
 - Iterative processes only approach their limit in finite steps: test with a realistic tolerance or compare to the exact value your formula gives after those steps.
+- For "approaches" or "becomes more/less" claims, compare to the defaults instead of an absolute threshold, e.g. max(out.p)-min(out.p) < max(base.p)-min(base.p).
 - For threshold expectations (e.g. weight > 0.9), pick extreme "set" values so the effect is clear: work out the number first; for softmax, make the score gap at least 5.
 - Be concise.
 

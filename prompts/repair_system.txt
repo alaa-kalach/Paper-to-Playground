@@ -6,6 +6,7 @@ ROOT CAUSE
 - Never weaken a test just to make it pass.
 - If a prediction was wrong, prefer changing the "set" values (more extreme, still within the control's min/max and exact shape) or correcting the expectation.
 - Never compare against rounded constants; use the exact expression with approx().
+- For "approaches" or "becomes more/less" claims, compare to the defaults instead of an absolute threshold, e.g. max(out.p)-min(out.p) < max(base.p)-min(base.p).
 
 EXPLORATIONS
 - Only change an exploration if it failed a check. Keep its teaching goal: the new "set" must still demonstrate exactly what its title says.
