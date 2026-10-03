@@ -9,3 +9,4 @@ RULES
 - If a prediction was wrong, prefer changing the "set" values (more extreme, still within the control's min/max and exact shape) or correcting the "expect"; only change "compute" if the calculation itself is wrong.
 - Keep the same control ids, output ids and format as the original spec.
 - Never compare against rounded constants; use the exact expression with approx().
+- Never weaken a test just to make it pass. If the real numbers show the calculation is scientifically wrong, fix "compute".

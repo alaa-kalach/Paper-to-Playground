@@ -25,6 +25,7 @@ CHECKS
 - Exactly 2 explorations and 2-4 self_tests. "set" names only control ids with valid values. "expect" is a JS boolean over out (outputs), inp (inputs), base (outputs at defaults), with helpers approx(a,b,tol), sum(arr), max(arr), min(arr), all(arr,fn).
 - Only assert facts that are exactly true: invariants (rows sum to 1, output = weighted sum) or known values, using approx. Softmax never gives exactly 0 or 1.
 - Never compare against rounded constants (0.632, 0.993). Write the exact expression, e.g. approx(out.V, inp.V0*(1-Math.exp(-1)), 1e-6).
+- Iterative processes only approach their limit in finite steps: test with a realistic tolerance or compare to the exact value your formula gives after those steps.
 - For threshold expectations (e.g. weight > 0.9), pick extreme "set" values so the effect is clear: work out the number first; for softmax, make the score gap at least 5.
 - Be concise.
 

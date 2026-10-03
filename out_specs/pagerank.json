@@ -1,0 +1,219 @@
+{
+  "title": "PageRank: Random Surfer & Damping Factor",
+  "paper": {
+    "title": "The PageRank Citation Ranking: Bringing Order to the Web",
+    "authors": "Page, Brin, Motwani, Winograd",
+    "year": 1999,
+    "url": "http://ilpubs.stanford.edu:8090/422/",
+    "section": "Section 2",
+    "equation": null
+  },
+  "hook": "How does a random web surfer assign importance to pages? Adjust the link structure and damping factor to see PageRank in action.",
+  "symbols": [
+    {
+      "symbol": "d",
+      "meaning": "Damping factor: probability the surfer follows a link instead of jumping randomly.",
+      "source": "paper"
+    },
+    {
+      "symbol": "N",
+      "meaning": "Number of pages (here N=4).",
+      "source": "ours"
+    },
+    {
+      "symbol": "M",
+      "meaning": "Link matrix: M[i][j] = 1 if page i links to page j, else 0.",
+      "source": "ours"
+    },
+    {
+      "symbol": "r",
+      "meaning": "PageRank vector: r[i] is the rank of page i.",
+      "source": "paper"
+    },
+    {
+      "symbol": "r_i^{(k)}",
+      "meaning": "Rank of page i after k iterations.",
+      "source": "ours"
+    }
+  ],
+  "equation": {
+    "latex": "r_i = \\frac{1-d}{N} + d \\sum_{j \\to i} \\frac{r_j}{L(j)}",
+    "source": "paper",
+    "caption": "PageRank equation: rank of page i is the sum over incoming links from j, weighted by r_j divided by the number of outgoing links L(j), plus a random jump term."
+  },
+  "controls": [
+    {
+      "id": "M",
+      "type": "matrix",
+      "label": "Link matrix M (row i links to column j)",
+      "rows": 4,
+      "cols": 4,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "default": [
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "row_labels": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "col_labels": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    {
+      "id": "d",
+      "type": "slider",
+      "label": "Damping factor d",
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.85,
+      "symbol": "d"
+    }
+  ],
+  "compute": "function compute(inputs) {\n  const M = inputs.M;\n  const d = inputs.d;\n  const N = 4;\n  // Compute out-degree L(j) = sum of row j\n  const L = M.map(row => row.reduce((a, b) => a + b, 0));\n  // Initialize ranks uniformly\n  let r = new Array(N).fill(1 / N);\n  const maxIter = 100;\n  const tol = 1e-10;\n  let iter = 0;\n  let converged = false;\n  let r_prev = r.slice();\n  while (iter < maxIter && !converged) {\n    r_prev = r.slice();\n    const newR = new Array(N).fill(0);\n    for (let i = 0; i < N; i++) {\n      let sum = 0;\n      for (let j = 0; j < N; j++) {\n        if (M[j][i] === 1 && L[j] > 0) {\n          sum += r_prev[j] / L[j];\n        }\n      }\n      newR[i] = (1 - d) / N + d * sum;\n    }\n    r = newR;\n    // Check convergence\n    let diff = 0;\n    for (let i = 0; i < N; i++) {\n      diff += Math.abs(r[i] - r_prev[i]);\n    }\n    if (diff < tol) converged = true;\n    iter++;\n  }\n  // Normalize to ensure sum exactly 1 (avoid floating point drift)\n  const sumR = r.reduce((a, b) => a + b, 0);\n  r = r.map(val => val / sumR);\n  // Prepare table: per page i: r_i, L(i), incoming sum\n  const tableRows = [];\n  for (let i = 0; i < N; i++) {\n    let incomingSum = 0;\n    for (let j = 0; j < N; j++) {\n      if (M[j][i] === 1 && L[j] > 0) {\n        incomingSum += r[j] / L[j];\n      }\n    }\n    tableRows.push([\n      String.fromCharCode(65 + i),\n      r[i].toFixed(6),\n      L[i],\n      incomingSum.toFixed(6)\n    ]);\n  }\n  const table = {\n    columns: [\"Page\", \"r_i\", \"L(i)\", \"Incoming sum\"],\n    rows: tableRows\n  };\n  // Insight\n  const maxR = Math.max(...r);\n  const minR = Math.min(...r);\n  let insight = `Max rank = ${maxR.toFixed(4)} (page ${String.fromCharCode(65 + r.indexOf(maxR))}), min rank = ${minR.toFixed(4)} (page ${String.fromCharCode(65 + r.indexOf(minR))}). `;\n  if (d === 0) {\n    insight += \"With d=0, all pages have equal rank 0.25.\";\n  } else {\n    insight += `With d=${d.toFixed(2)}, pages with more incoming links tend to have higher rank.`;\n  }\n  return {\n    r: r,\n    table: table,\n    insight: insight\n  };\n}",
+  "outputs": [
+    {
+      "id": "r",
+      "type": "vector",
+      "label": "PageRank scores",
+      "labels": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    {
+      "id": "table",
+      "type": "table",
+      "label": "Intermediate quantities per page",
+      "columns": [
+        "Page",
+        "r_i",
+        "L(i)",
+        "Incoming sum"
+      ]
+    }
+  ],
+  "steps": [
+    "Initialize ranks: r_i^{(0)} = 1/N for all i.",
+    "For each iteration k, update: r_i^{(k+1)} = \\frac{1-d}{N} + d \\sum_{j \\to i} \\frac{r_j^{(k)}}{L(j)}.",
+    "Repeat until convergence (change in ranks < 1e-10).",
+    "Normalize final ranks so they sum to 1."
+  ],
+  "explorations": [
+    {
+      "title": "Effect of damping factor",
+      "predict": "What happens to the ranks when d=0?",
+      "set": {
+        "d": 0
+      },
+      "observe": "All pages have rank 0.25.",
+      "why": "When d=0, the equation reduces to r_i = 1/N, so every page gets equal rank regardless of links.",
+      "expect": "approx(out.r[0], 0.25, 1e-6) && approx(out.r[1], 0.25, 1e-6) && approx(out.r[2], 0.25, 1e-6) && approx(out.r[3], 0.25, 1e-6)"
+    },
+    {
+      "title": "High damping rewards linked pages",
+      "predict": "With d=0.95, which page has the highest rank?",
+      "set": {
+        "d": 0.95
+      },
+      "observe": "Page C has the highest rank because it has the most incoming links.",
+      "why": "Higher d means the surfer follows links more often, so pages with many incoming links accumulate more rank.",
+      "expect": "out.r[2] > out.r[0] && out.r[2] > out.r[1] && out.r[2] > out.r[3]"
+    }
+  ],
+  "self_tests": [
+    {
+      "name": "Ranks sum to 1",
+      "set": {},
+      "expect": "approx(sum(out.r), 1, 1e-6)"
+    },
+    {
+      "name": "d=0 gives uniform ranks",
+      "set": {
+        "d": 0
+      },
+      "expect": "approx(out.r[0], 0.25, 1e-6) && approx(out.r[1], 0.25, 1e-6) && approx(out.r[2], 0.25, 1e-6) && approx(out.r[3], 0.25, 1e-6)"
+    },
+    {
+      "name": "Page C has highest rank with default d",
+      "set": {},
+      "expect": "out.r[2] > out.r[0] && out.r[2] > out.r[1] && out.r[2] > out.r[3]"
+    }
+  ],
+  "limitation": "This toy model assumes a static link graph and does not account for dangling nodes (pages with no outgoing links) or personalization; in the full PageRank, dangling nodes are handled by redistributing their rank uniformly.",
+  "misconception": "PageRank is not simply counting incoming links; the rank of linking pages matters, and the damping factor controls how much link structure influences the final scores.",
+  "claims": [
+    {
+      "text": "PageRank is the stationary distribution of a random surfer who follows links with probability d and jumps randomly with probability 1-d.",
+      "source": "paper"
+    },
+    {
+      "text": "In our toy setup, we use a 4-page graph and power iteration to compute ranks, simplifying the web graph to a small matrix.",
+      "source": "ours"
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome": "Explain PageRank as the stationary distribution of a random surfer with damping factor d.",
+      "covered_by": [
+        "equation",
+        "exploration:1",
+        "exploration:2"
+      ]
+    },
+    {
+      "outcome": "Edit the link matrix and change d to see how PageRank scores change.",
+      "covered_by": [
+        "control:M",
+        "control:d",
+        "output:r"
+      ]
+    },
+    {
+      "outcome": "Observe that d=0 gives equal ranks and higher d rewards pages with many incoming links.",
+      "covered_by": [
+        "exploration:1",
+        "exploration:2"
+      ]
+    },
+    {
+      "outcome": "Check that the ranks sum to 1.",
+      "covered_by": [
+        "self_test:1"
+      ]
+    }
+  ]
+}

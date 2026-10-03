@@ -1,14 +1,14 @@
 {
-  "title": "Shannon's Sampling Theorem: Why Twice the Highest Frequency?",
+  "title": "Shannon's Sampling Theorem: Why Twice the Bandwidth?",
   "paper": {
     "title": "Communication in the Presence of Noise",
-    "authors": "Claude E. Shannon",
+    "authors": "C. E. Shannon",
     "year": 1949,
     "url": "https://ieeexplore.ieee.org/document/1697831",
     "section": "Section II",
     "equation": null
   },
-  "hook": "A sine wave sampled too slowly looks like a slower sine wave. This is aliasing. Shannon's theorem tells us exactly how fast we must sample to avoid it.",
+  "hook": "A sine wave sampled too slowly looks like a different, slower sine wave. This is aliasing. Shannon's theorem tells us exactly how fast we must sample to avoid it.",
   "symbols": [
     {
       "symbol": "f",
@@ -17,13 +17,13 @@
     },
     {
       "symbol": "f_s",
-      "meaning": "Sampling rate (Hz)",
+      "meaning": "Sampling frequency (Hz)",
       "source": "ours"
     },
     {
       "symbol": "f_N",
       "meaning": "Nyquist rate = 2f (Hz)",
-      "source": "ours"
+      "source": "paper"
     },
     {
       "symbol": "f_a",
@@ -31,32 +31,32 @@
       "source": "ours"
     },
     {
-      "symbol": "k",
-      "meaning": "Integer chosen so that f_a is in [0, f_s/2]",
+      "symbol": "T_s",
+      "meaning": "Sampling interval = 1/f_s (s)",
       "source": "ours"
     },
     {
-      "symbol": "t_n",
-      "meaning": "Sample times: n/f_s",
+      "symbol": "n",
+      "meaning": "Sample index (integer)",
       "source": "ours"
     },
     {
-      "symbol": "x(t)",
-      "meaning": "Signal: sin(2\u03c0 f t)",
+      "symbol": "t",
+      "meaning": "Time (s)",
       "source": "ours"
     }
   ],
   "equation": {
     "latex": "f_a = |f - k f_s|, \\quad k = \\mathrm{round}(f / f_s)",
     "source": "ours",
-    "caption": "The apparent frequency after sampling. If f_s > 2f, then k=0 and f_a = f (no aliasing). If f_s < 2f, k\u22651 and f_a < f (aliasing)."
+    "caption": "The apparent frequency after sampling. If f_s > 2f, then k=0 and f_a = f (no aliasing)."
   },
   "controls": [
     {
       "id": "f",
       "type": "slider",
       "label": "Signal frequency f (Hz)",
-      "min": 1,
+      "min": 0.5,
       "max": 10,
       "step": 0.5,
       "default": 3,
@@ -65,7 +65,7 @@
     {
       "id": "fs",
       "type": "slider",
-      "label": "Sampling rate f_s (Hz)",
+      "label": "Sampling frequency f_s (Hz)",
       "min": 1,
       "max": 20,
       "step": 0.5,
@@ -73,35 +73,28 @@
       "symbol": "f_s"
     }
   ],
-  "compute": "function compute(inputs){\n  const f = inputs.f;\n  const fs = inputs.fs;\n  const fN = 2 * f;\n  const k = Math.round(f / fs);\n  const fa = Math.abs(f - k * fs);\n  const N = 200;\n  const tmax = 1;\n  const t = [];\n  const x = [];\n  const xa = [];\n  for (let i = 0; i <= N; i++) {\n    const ti = tmax * i / N;\n    t.push(ti);\n    x.push(Math.sin(2 * Math.PI * f * ti));\n    xa.push(Math.sin(2 * Math.PI * fa * ti));\n  }\n  const sampleTimes = [];\n  const sampleValues = [];\n  const nSamples = Math.floor(fs * tmax);\n  for (let n = 0; n <= nSamples; n++) {\n    const tn = n / fs;\n    sampleTimes.push(tn);\n    sampleValues.push(Math.sin(2 * Math.PI * f * tn));\n  }\n  const series = {\n    x: t,\n    lines: [\n      {name: 'Original x(t)', y: x},\n      {name: 'Apparent x_a(t)', y: xa}\n    ],\n    marker: {x: sampleTimes, y: sampleValues}\n  };\n  const table = {\n    columns: ['Quantity', 'Value'],\n    rows: [\n      ['f (Hz)', f.toFixed(2)],\n      ['f_s (Hz)', fs.toFixed(2)],\n      ['Nyquist rate 2f (Hz)', fN.toFixed(2)],\n      ['k = round(f/f_s)', k],\n      ['f_a = |f - k f_s| (Hz)', fa.toFixed(2)],\n      ['Aliasing?', fs < fN ? 'Yes' : 'No']\n    ]\n  };\n  let insight;\n  if (fs >= fN) {\n    insight = 'f_s = ' + fs.toFixed(1) + ' Hz \u2265 2f = ' + fN.toFixed(1) + ' Hz. No aliasing: f_a = f = ' + f.toFixed(1) + ' Hz.';\n  } else {\n    insight = 'f_s = ' + fs.toFixed(1) + ' Hz < 2f = ' + fN.toFixed(1) + ' Hz. Aliasing: f_a = ' + fa.toFixed(1) + ' Hz (k=' + k + ').';\n  }\n  return {\n    series: series,\n    table: table,\n    f: f,\n    fs: fs,\n    fN: fN,\n    fa: fa,\n    k: k,\n    insight: insight\n  };\n}",
+  "compute": "function compute(inputs){\n  const f = inputs.f;\n  const fs = inputs.fs;\n  const Ts = 1/fs;\n  const fN = 2*f;\n  const k = Math.round(f/fs);\n  const fa = Math.abs(f - k*fs);\n  const aliased = fs < fN;\n  const T = 1;\n  const N = 200;\n  const t = [];\n  const orig = [];\n  const recon = [];\n  for(let i=0;i<N;i++){\n    const ti = i*T/(N-1);\n    t.push(ti);\n    orig.push(Math.sin(2*Math.PI*f*ti));\n    recon.push(Math.sin(2*Math.PI*fa*ti));\n  }\n  const sampleT = [];\n  const sampleY = [];\n  const nMax = Math.floor(T/Ts);\n  for(let n=0;n<=nMax;n++){\n    const tn = n*Ts;\n    sampleT.push(tn);\n    sampleY.push(Math.sin(2*Math.PI*f*tn));\n  }\n  const series = {\n    x: t,\n    lines: [\n      {name: 'Original', y: orig},\n      {name: 'Reconstructed', y: recon}\n    ],\n    marker: {x: sampleT, y: sampleY}\n  };\n  const table = {\n    columns: ['Quantity', 'Value'],\n    rows: [\n      ['f (Hz)', f.toFixed(2)],\n      ['f_s (Hz)', fs.toFixed(2)],\n      ['Nyquist rate 2f (Hz)', fN.toFixed(2)],\n      ['Aliased?', aliased ? 'Yes' : 'No'],\n      ['k = round(f/f_s)', k],\n      ['f_a = |f - k f_s| (Hz)', fa.toFixed(2)]\n    ]\n  };\n  let insight = '';\n  if(aliased){\n    insight = 'Sampling rate ' + fs.toFixed(1) + ' Hz is below the Nyquist rate ' + fN.toFixed(1) + ' Hz. The signal aliases to ' + fa.toFixed(2) + ' Hz.';\n  } else {\n    insight = 'Sampling rate ' + fs.toFixed(1) + ' Hz is above the Nyquist rate ' + fN.toFixed(1) + ' Hz. The reconstructed frequency equals the true frequency ' + f.toFixed(2) + ' Hz.';\n  }\n  return {\n    series: series,\n    table: table,\n    fa: fa,\n    fN: fN,\n    aliased: aliased,\n    insight: insight\n  };\n}",
   "outputs": [
     {
       "id": "series",
       "type": "series",
-      "label": "Waveforms and samples",
+      "label": "Waveforms",
       "x_label": "Time (s)",
       "y_label": "Amplitude"
     },
     {
       "id": "table",
       "type": "table",
-      "label": "Computed quantities",
+      "label": "Intermediate quantities",
       "columns": [
         "Quantity",
         "Value"
-      ],
-      "rows": []
+      ]
     },
     {
-      "id": "f",
+      "id": "fa",
       "type": "scalar",
-      "label": "Signal frequency f",
-      "unit": "Hz"
-    },
-    {
-      "id": "fs",
-      "type": "scalar",
-      "label": "Sampling rate f_s",
+      "label": "Apparent frequency f_a",
       "unit": "Hz"
     },
     {
@@ -111,95 +104,81 @@
       "unit": "Hz"
     },
     {
-      "id": "fa",
+      "id": "aliased",
       "type": "scalar",
-      "label": "Apparent frequency f_a",
-      "unit": "Hz"
-    },
-    {
-      "id": "k",
-      "type": "scalar",
-      "label": "Alias index k"
+      "label": "Aliased? (1=yes, 0=no)"
     }
   ],
   "steps": [
-    "Signal: x(t) = \\sin(2\\pi f t) with f = {{f}} Hz.",
-    "Sampling rate: f_s = {{fs}} Hz. Nyquist rate: 2f = {{fN}} Hz.",
-    "Alias index: k = \\mathrm{round}(f / f_s) = {{k}}.",
-    "Apparent frequency: f_a = |f - k f_s| = {{fa}} Hz.",
-    "If f_s > 2f, then k=0 and f_a = f. If f_s < 2f, then k\u22651 and f_a < f."
+    "Set signal frequency f = {{f}} Hz and sampling frequency f_s = {{fs}} Hz.",
+    "Nyquist rate: f_N = 2f = {{fN}} Hz.",
+    "If f_s > f_N, no aliasing: f_a = f = {{f}} Hz.",
+    "If f_s < f_N, aliasing occurs: f_a = |f - k f_s| with k = round(f/f_s).",
+    "Here k = round({{f}}/{{fs}}) and f_a = {{fa}} Hz."
   ],
   "explorations": [
     {
-      "title": "No aliasing when sampling above Nyquist",
-      "predict": "Set f = 3 Hz and f_s = 10 Hz. Is f_s > 2f? What is f_a?",
+      "title": "No aliasing above Nyquist",
+      "predict": "If f_s is greater than 2f, what is the apparent frequency?",
       "set": {
         "f": 3,
         "fs": 10
       },
-      "observe": "f_s = 10 Hz > 2f = 6 Hz. k = round(3/10) = 0. f_a = |3 - 0| = 3 Hz. The apparent wave matches the original.",
-      "why": "Because f_s > 2f, the sampling rate is high enough to capture the signal's oscillations. The alias index k is 0, so f_a = f.",
-      "expect": "approx(out.fa, inp.f, 1e-6) && out.k === 0"
+      "observe": "The reconstructed wave matches the original. f_a = 3 Hz.",
+      "why": "When f_s > 2f, k = round(f/f_s) = 0, so f_a = |f - 0| = f. The samples capture the true oscillation.",
+      "expect": "approx(out.fa, inp.f, 1e-6) && !out.aliased"
     },
     {
-      "title": "Aliasing when sampling below Nyquist",
-      "predict": "Set f = 7 Hz and f_s = 10 Hz. Is f_s > 2f? What is f_a?",
+      "title": "Aliasing below Nyquist",
+      "predict": "If f_s is less than 2f, what apparent frequency do you see?",
       "set": {
         "f": 7,
         "fs": 10
       },
-      "observe": "f_s = 10 Hz < 2f = 14 Hz. k = round(7/10) = 1. f_a = |7 - 10| = 3 Hz. The apparent wave is slower (3 Hz) than the original (7 Hz).",
-      "why": "Because f_s < 2f, the samples cannot distinguish the 7 Hz signal from a 3 Hz signal. The alias index k=1 gives f_a = |f - f_s| = 3 Hz.",
-      "expect": "approx(out.fa, Math.abs(inp.f - inp.fs), 1e-6) && out.k === 1"
+      "observe": "The reconstructed wave has a lower frequency than the original. f_a = 3 Hz.",
+      "why": "Here k = round(7/10) = 1, so f_a = |7 - 1*10| = 3 Hz. The samples are consistent with a 3 Hz sine wave.",
+      "expect": "approx(out.fa, Math.abs(inp.f - Math.round(inp.f/inp.fs)*inp.fs), 1e-6) && out.aliased"
     }
   ],
   "self_tests": [
     {
       "name": "No aliasing when f_s > 2f",
       "set": {
-        "f": 3,
-        "fs": 10
+        "f": 2,
+        "fs": 5
       },
-      "expect": "approx(out.fa, inp.f, 1e-6) && out.k === 0"
+      "expect": "approx(out.fa, inp.f, 1e-6) && !out.aliased"
     },
     {
       "name": "Aliasing when f_s < 2f",
       "set": {
-        "f": 7,
+        "f": 8,
         "fs": 10
       },
-      "expect": "approx(out.fa, Math.abs(inp.f - inp.fs), 1e-6) && out.k === 1"
+      "expect": "approx(out.fa, Math.abs(inp.f - Math.round(inp.f/inp.fs)*inp.fs), 1e-6) && out.aliased"
     },
     {
-      "name": "Nyquist rate is twice the signal frequency",
+      "name": "Nyquist rate is twice signal frequency",
       "set": {
         "f": 4,
-        "fs": 8
-      },
-      "expect": "approx(out.fN, 2 * inp.f, 1e-6)"
-    },
-    {
-      "name": "Apparent frequency never exceeds half the sampling rate",
-      "set": {
-        "f": 9,
         "fs": 10
       },
-      "expect": "out.fa <= inp.fs / 2 + 1e-6"
+      "expect": "approx(out.fN, 2*inp.f, 1e-6)"
     }
   ],
-  "limitation": "This demonstration uses a single sine wave. Shannon's theorem applies to any bandlimited signal, but here we only show the simplest case. Also, we assume ideal sampling (instantaneous samples) and perfect reconstruction, which ignores practical issues like finite sampling aperture and quantization.",
-  "misconception": "A common misconception is that sampling faster than the signal frequency is enough. In fact, you must sample faster than twice the highest frequency to avoid aliasing.",
+  "limitation": "This demonstration uses a single sine wave, but Shannon's theorem applies to any bandlimited signal. For a general signal with bandwidth B, the sampling rate must exceed 2B, and reconstruction requires an ideal low-pass filter (sinc interpolation), which is not shown here.",
+  "misconception": "A common mistake is to think that sampling at exactly twice the highest frequency is sufficient. In practice, sampling must be strictly greater than twice the highest frequency to avoid aliasing, and real systems sample well above the Nyquist rate.",
   "claims": [
     {
       "text": "A signal must be sampled at a rate greater than twice its highest frequency to be reconstructed without aliasing.",
       "source": "paper"
     },
     {
-      "text": "When sampling below the Nyquist rate, the apparent frequency is |f - k f_s| for some integer k.",
+      "text": "When sampling below the Nyquist rate, the apparent frequency is |f - k f_s| where k is the nearest integer to f/f_s.",
       "source": "ours"
     },
     {
-      "text": "The toy model uses a single sine wave and ideal sampling to illustrate the theorem.",
+      "text": "The toy model uses a single sine wave and ideal sampling, ignoring quantization and filter effects.",
       "source": "ours"
     }
   ],
@@ -213,19 +192,19 @@
       ]
     },
     {
-      "outcome": "Compute the apparent frequency when aliasing occurs.",
+      "outcome": "Predict the apparent frequency when aliasing occurs.",
       "covered_by": [
+        "exploration:2",
         "output:fa",
-        "output:table",
-        "exploration:2"
+        "output:series"
       ]
     },
     {
-      "outcome": "Identify when aliasing happens by comparing f_s and 2f.",
+      "outcome": "Verify that sampling above the Nyquist rate recovers the true frequency.",
       "covered_by": [
-        "output:table",
         "exploration:1",
-        "exploration:2"
+        "output:fa",
+        "output:series"
       ]
     }
   ]

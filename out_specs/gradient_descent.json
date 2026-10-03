@@ -1,0 +1,221 @@
+{
+  "title": "Gradient Descent on a 1D Quadratic",
+  "paper": {
+    "title": "An overview of gradient descent optimization algorithms",
+    "authors": null,
+    "year": null,
+    "url": "https://arxiv.org/abs/1609.04747",
+    "section": "Section 2",
+    "equation": null
+  },
+  "hook": "Watch a ball roll down a parabola. If the step size is too big, it flies away!",
+  "symbols": [
+    {
+      "symbol": "\\theta",
+      "meaning": "parameter (position on the x-axis)",
+      "source": "paper"
+    },
+    {
+      "symbol": "\\eta",
+      "meaning": "learning rate (step size)",
+      "source": "paper"
+    },
+    {
+      "symbol": "\\nabla f(\\theta)",
+      "meaning": "gradient of the loss at \\theta",
+      "source": "paper"
+    },
+    {
+      "symbol": "f(\\theta)",
+      "meaning": "loss function, here f(\\theta)=\\theta^2",
+      "source": "ours"
+    }
+  ],
+  "equation": {
+    "latex": "\\theta_{t+1} = \\theta_t - \\eta \\nabla f(\\theta_t)",
+    "source": "paper",
+    "caption": "Gradient descent update rule."
+  },
+  "controls": [
+    {
+      "id": "eta",
+      "type": "slider",
+      "label": "Learning rate (\\eta)",
+      "min": 0.01,
+      "max": 1.5,
+      "step": 0.01,
+      "default": 0.1,
+      "symbol": "\\eta"
+    },
+    {
+      "id": "theta0",
+      "type": "slider",
+      "label": "Starting point (\\theta_0)",
+      "min": -2,
+      "max": 2,
+      "step": 0.1,
+      "default": 1,
+      "symbol": "\\theta_0"
+    }
+  ],
+  "compute": "function compute(inputs) {\n  const eta = inputs.eta;\n  const theta0 = inputs.theta0;\n  const steps = 20;\n  const thetas = [theta0];\n  const losses = [theta0*theta0];\n  let theta = theta0;\n  for (let i = 0; i < steps; i++) {\n    const grad = 2 * theta;\n    theta = theta - eta * grad;\n    thetas.push(theta);\n    losses.push(theta*theta);\n  }\n  const finalTheta = thetas[thetas.length-1];\n  const finalLoss = losses[losses.length-1];\n  const converged = Math.abs(finalTheta) < 1e-6;\n  const diverged = Math.abs(finalTheta) > 1e6;\n  let insight = '';\n  if (eta < 1) {\n    insight = 'Converges to 0 because |1-2\\u03b7| < 1.';\n  } else if (eta === 1) {\n    insight = 'Oscillates between \\u03b8 and -\\u03b8 forever.';\n  } else {\n    insight = 'Diverges because |1-2\\u03b7| > 1.';\n  }\n  if (eta === 0.5) {\n    insight = 'Reaches the minimum in one step because 1-2\\u03b7 = 0.';\n  }\n  const tableRows = [];\n  for (let i = 0; i <= steps; i++) {\n    tableRows.push([i, thetas[i], losses[i]]);\n  }\n  return {\n    theta: thetas,\n    loss: losses,\n    finalTheta: finalTheta,\n    finalLoss: finalLoss,\n    converged: converged,\n    diverged: diverged,\n    insight: insight,\n    table: { columns: ['Step', '\\u03b8', 'Loss'], rows: tableRows }\n  };\n}",
+  "outputs": [
+    {
+      "id": "theta",
+      "type": "series",
+      "label": "Parameter \\theta over steps",
+      "x_label": "Step",
+      "y_label": "\\theta",
+      "lines": [
+        {
+          "name": "\\theta",
+          "y": []
+        }
+      ]
+    },
+    {
+      "id": "loss",
+      "type": "series",
+      "label": "Loss f(\\theta) over steps",
+      "x_label": "Step",
+      "y_label": "Loss",
+      "lines": [
+        {
+          "name": "Loss",
+          "y": []
+        }
+      ]
+    },
+    {
+      "id": "finalTheta",
+      "type": "scalar",
+      "label": "Final \\theta",
+      "unit": ""
+    },
+    {
+      "id": "finalLoss",
+      "type": "scalar",
+      "label": "Final loss",
+      "unit": ""
+    },
+    {
+      "id": "converged",
+      "type": "scalar",
+      "label": "Converged?",
+      "unit": ""
+    },
+    {
+      "id": "diverged",
+      "type": "scalar",
+      "label": "Diverged?",
+      "unit": ""
+    },
+    {
+      "id": "table",
+      "type": "table",
+      "label": "Step-by-step values",
+      "columns": [
+        "Step",
+        "\\u03b8",
+        "Loss"
+      ],
+      "rows": []
+    }
+  ],
+  "steps": [
+    "Start at \\theta_0 = {{theta0}}.",
+    "Compute gradient: \\nabla f(\\theta) = 2\\theta.",
+    "Update: \\theta_{t+1} = \\theta_t - \\eta \\nabla f(\\theta_t) with \\eta = {{eta}}.",
+    "Repeat 20 times."
+  ],
+  "explorations": [
+    {
+      "title": "Convergence vs divergence",
+      "predict": "What happens if \\eta = 0.1 vs \\eta = 1.2?",
+      "set": {
+        "eta": 0.1,
+        "theta0": 1
+      },
+      "observe": "With \\eta=0.1, \\theta shrinks to 0. With \\eta=1.2, \\theta grows without bound.",
+      "why": "The update multiplies \\theta by (1-2\\eta). If |1-2\\eta|<1, it shrinks; if >1, it grows.",
+      "expect": "approx(out.finalTheta, 0, 1e-6) && out.diverged === false"
+    },
+    {
+      "title": "One-step convergence at \\eta=0.5",
+      "predict": "Can we reach the minimum in one step?",
+      "set": {
+        "eta": 0.5,
+        "theta0": 1
+      },
+      "observe": "After one step, \\theta becomes 0.",
+      "why": "When \\eta=0.5, the factor (1-2\\eta) is zero, so \\theta_1 = 0.",
+      "expect": "approx(out.finalTheta, 0, 1e-6) && approx(out.finalLoss, 0, 1e-6)"
+    }
+  ],
+  "self_tests": [
+    {
+      "name": "Convergence for small eta",
+      "set": {
+        "eta": 0.1,
+        "theta0": 1
+      },
+      "expect": "approx(out.finalTheta, 0, 1e-6)"
+    },
+    {
+      "name": "Divergence for large eta",
+      "set": {
+        "eta": 1.2,
+        "theta0": 1
+      },
+      "expect": "out.diverged === true"
+    },
+    {
+      "name": "One-step convergence at eta=0.5",
+      "set": {
+        "eta": 0.5,
+        "theta0": 1
+      },
+      "expect": "approx(out.finalTheta, 0, 1e-6)"
+    }
+  ],
+  "limitation": "This demo uses a simple 1D quadratic where the gradient is exactly 2\\theta. Real loss surfaces are high-dimensional and non-convex, so convergence depends on more than just the learning rate.",
+  "misconception": "A larger learning rate always speeds up convergence. In reality, if \\eta > 1, the iterates diverge.",
+  "claims": [
+    {
+      "text": "Gradient descent updates parameters by subtracting the learning rate times the gradient.",
+      "source": "paper"
+    },
+    {
+      "text": "For f(\\theta)=\\theta^2, the update is \\theta_{t+1} = (1-2\\eta)\\theta_t.",
+      "source": "ours"
+    },
+    {
+      "text": "Convergence requires |1-2\\eta| < 1, i.e., 0 < \\eta < 1.",
+      "source": "ours"
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome": "Explain the gradient descent update rule.",
+      "covered_by": [
+        "equation",
+        "steps"
+      ]
+    },
+    {
+      "outcome": "Predict convergence or divergence based on the learning rate.",
+      "covered_by": [
+        "exploration:1",
+        "output:finalTheta",
+        "output:diverged"
+      ]
+    },
+    {
+      "outcome": "Verify that \\eta=0.5 reaches the minimum in one step.",
+      "covered_by": [
+        "exploration:2",
+        "output:finalTheta"
+      ]
+    }
+  ]
+}
