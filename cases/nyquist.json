@@ -1,0 +1,5 @@
+{
+  "source_url": "https://ieeexplore.ieee.org/document/1697831",
+  "focus": "Shannon's sampling theorem (Communication in the Presence of Noise, Section II). Explain why a signal must be sampled faster than twice its highest frequency. Let the learner change the signal frequency and the sampling rate. Show the original sine wave, the sample points, and the reconstructed (apparent) frequency. Demonstrate aliasing when the sampling rate is below twice the signal frequency. Check that sampling above the Nyquist rate recovers the true frequency and below it produces the alias frequency |f - k*fs|.",
+  "audience": "Engineering undergraduate"
+}

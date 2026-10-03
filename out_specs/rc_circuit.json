@@ -1,0 +1,239 @@
+{
+  "title": "RC Charging: The Time Constant \u03c4 = RC",
+  "paper": {
+    "title": "RC circuit",
+    "authors": null,
+    "year": null,
+    "url": "https://en.wikipedia.org/wiki/RC_circuit",
+    "section": null,
+    "equation": null
+  },
+  "hook": "How fast does a capacitor charge? The answer is hidden in the product of R and C.",
+  "symbols": [
+    {
+      "symbol": "V_0",
+      "meaning": "Supply voltage (volts)",
+      "source": "paper"
+    },
+    {
+      "symbol": "R",
+      "meaning": "Resistance (ohms)",
+      "source": "paper"
+    },
+    {
+      "symbol": "C",
+      "meaning": "Capacitance (farads)",
+      "source": "paper"
+    },
+    {
+      "symbol": "t",
+      "meaning": "Time (seconds)",
+      "source": "paper"
+    },
+    {
+      "symbol": "\\tau",
+      "meaning": "Time constant, \\tau = RC (seconds)",
+      "source": "paper"
+    },
+    {
+      "symbol": "V(t)",
+      "meaning": "Capacitor voltage at time t (volts)",
+      "source": "paper"
+    }
+  ],
+  "equation": {
+    "latex": "V(t) = V_0 \\left(1 - e^{-t/\\tau}\\right), \\quad \\tau = RC",
+    "source": "paper",
+    "caption": "Capacitor voltage during charging in a series RC circuit."
+  },
+  "controls": [
+    {
+      "id": "R",
+      "type": "slider",
+      "label": "Resistance R (\u03a9)",
+      "min": 100,
+      "max": 10000,
+      "step": 100,
+      "default": 1000,
+      "symbol": "R"
+    },
+    {
+      "id": "C",
+      "type": "slider",
+      "label": "Capacitance C (F)",
+      "min": 1e-06,
+      "max": 0.001,
+      "step": 1e-06,
+      "default": 0.0001,
+      "symbol": "C"
+    },
+    {
+      "id": "V0",
+      "type": "slider",
+      "label": "Supply voltage V\u2080 (V)",
+      "min": 1,
+      "max": 20,
+      "step": 0.5,
+      "default": 10,
+      "symbol": "V_0"
+    }
+  ],
+  "compute": "function compute(inputs) {\n  const R = inputs.R;\n  const C = inputs.C;\n  const V0 = inputs.V0;\n  const tau = R * C;\n  const tMax = 5 * tau;\n  const N = 100;\n  const t = [];\n  const V = [];\n  for (let i = 0; i <= N; i++) {\n    const ti = (i / N) * tMax;\n    t.push(ti);\n    V.push(V0 * (1 - Math.exp(-ti / tau)));\n  }\n  const Vtau = V0 * (1 - Math.exp(-1));\n  const V5tau = V0 * (1 - Math.exp(-5));\n  const series = {\n    x: t,\n    lines: [{ name: 'V(t)', y: V }],\n    marker: { x: tau, y: Vtau }\n  };\n  const table = {\n    columns: ['Quantity', 'Value'],\n    rows: [\n      ['\u03c4 = RC', tau.toFixed(6) + ' s'],\n      ['V(0)', '0 V'],\n      ['V(\u03c4)', Vtau.toFixed(4) + ' V'],\n      ['V(5\u03c4)', V5tau.toFixed(4) + ' V'],\n      ['V\u2080', V0.toFixed(2) + ' V']\n    ]\n  };\n  const insight = `At t = \u03c4, V = ${Vtau.toFixed(2)} V (${(100 * (1 - Math.exp(-1))).toFixed(1)}% of V\u2080). At t = 5\u03c4, V = ${V5tau.toFixed(2)} V (${(100 * (1 - Math.exp(-5))).toFixed(1)}% of V\u2080).`;\n  return {\n    tau: tau,\n    Vtau: Vtau,\n    V5tau: V5tau,\n    series: series,\n    table: table,\n    insight: insight\n  };\n}",
+  "outputs": [
+    {
+      "id": "tau",
+      "type": "scalar",
+      "label": "Time constant \u03c4",
+      "unit": "s"
+    },
+    {
+      "id": "Vtau",
+      "type": "scalar",
+      "label": "Voltage at t = \u03c4",
+      "unit": "V"
+    },
+    {
+      "id": "V5tau",
+      "type": "scalar",
+      "label": "Voltage at t = 5\u03c4",
+      "unit": "V"
+    },
+    {
+      "id": "series",
+      "type": "series",
+      "label": "Charging curve",
+      "x_label": "Time (s)",
+      "y_label": "Voltage (V)"
+    },
+    {
+      "id": "table",
+      "type": "table",
+      "label": "Key values",
+      "columns": [
+        "Quantity",
+        "Value"
+      ]
+    }
+  ],
+  "steps": [
+    "The time constant is \\(\\tau = RC = {{R}} \\times {{C}} = {{tau}}\\) s.",
+    "The capacitor voltage follows \\(V(t) = V_0 (1 - e^{-t/\\tau})\\).",
+    "At \\(t = \\tau\\), \\(V(\\tau) = V_0 (1 - e^{-1}) \\approx 0.632 V_0 = {{Vtau}}\\) V.",
+    "At \\(t = 5\\tau\\), \\(V(5\\tau) = V_0 (1 - e^{-5}) \\approx 0.993 V_0 = {{V5tau}}\\) V."
+  ],
+  "explorations": [
+    {
+      "title": "Effect of R on charging time",
+      "predict": "If you double R, what happens to the time to reach 63% of V\u2080?",
+      "set": {
+        "R": 2000,
+        "C": 0.0001,
+        "V0": 10
+      },
+      "observe": "The curve rises more slowly. The time constant \u03c4 = RC doubles, so it takes twice as long to reach the same fraction of V\u2080.",
+      "why": "Because \u03c4 = RC, increasing R increases \u03c4, which stretches the exponential curve in time.",
+      "expect": "approx(out.tau, 0.2, 1e-6)"
+    },
+    {
+      "title": "Voltage at one time constant",
+      "predict": "What is V(\u03c4) as a fraction of V\u2080?",
+      "set": {
+        "R": 1000,
+        "C": 0.0001,
+        "V0": 10
+      },
+      "observe": "At t = \u03c4, the voltage is about 63.2% of V\u2080.",
+      "why": "Substituting t = \u03c4 into V(t) = V\u2080(1 - e^{-t/\u03c4}) gives V(\u03c4) = V\u2080(1 - e^{-1}) \u2248 0.632 V\u2080.",
+      "expect": "approx(out.Vtau, inp.V0 * (1 - Math.exp(-1)), 1e-6)"
+    }
+  ],
+  "self_tests": [
+    {
+      "name": "Initial voltage is zero",
+      "set": {
+        "R": 1000,
+        "C": 0.0001,
+        "V0": 10
+      },
+      "expect": "approx(out.series.lines[0].y[0], 0, 1e-6)"
+    },
+    {
+      "name": "Voltage at 5\u03c4 is nearly V\u2080",
+      "set": {
+        "R": 1000,
+        "C": 0.0001,
+        "V0": 10
+      },
+      "expect": "approx(out.V5tau, inp.V0 * (1 - Math.exp(-5)), 1e-6)"
+    },
+    {
+      "name": "Time constant scales with R",
+      "set": {
+        "R": 2000,
+        "C": 0.0001,
+        "V0": 10
+      },
+      "expect": "approx(out.tau, 2000 * 0.0001, 1e-6)"
+    }
+  ],
+  "limitation": "This model assumes an ideal voltage source, ideal resistor, and ideal capacitor with no parasitic elements. It does not account for the internal resistance of the source or the equivalent series resistance (ESR) of the capacitor, which can affect the charging time in real circuits.",
+  "misconception": "Many think the capacitor charges linearly. In reality, the charging follows an exponential curve, and the rate slows down as the capacitor voltage approaches the supply voltage.",
+  "claims": [
+    {
+      "text": "The time constant \u03c4 is the product of resistance and capacitance: \u03c4 = RC.",
+      "source": "paper"
+    },
+    {
+      "text": "The capacitor voltage during charging is given by V(t) = V\u2080(1 - e^{-t/\u03c4}).",
+      "source": "paper"
+    },
+    {
+      "text": "After one time constant, the capacitor reaches approximately 63.2% of the supply voltage.",
+      "source": "paper"
+    },
+    {
+      "text": "After five time constants, the capacitor is considered fully charged (over 99%).",
+      "source": "paper"
+    },
+    {
+      "text": "In our simulation, we assume ideal components and a constant voltage source, ignoring parasitic resistances and inductances.",
+      "source": "ours"
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome": "Explain the meaning of the time constant \u03c4 = RC.",
+      "covered_by": [
+        "control:R",
+        "control:C",
+        "output:tau",
+        "exploration:1"
+      ]
+    },
+    {
+      "outcome": "Sketch the exponential charging curve V(t) = V\u2080(1 - e^{-t/\u03c4}).",
+      "covered_by": [
+        "output:series",
+        "steps:2"
+      ]
+    },
+    {
+      "outcome": "Calculate the voltage at t = \u03c4 and t = 5\u03c4.",
+      "covered_by": [
+        "output:Vtau",
+        "output:V5tau",
+        "steps:3",
+        "steps:4",
+        "exploration:2"
+      ]
+    },
+    {
+      "outcome": "Verify that V(0) = 0 and V(\u03c4) \u2248 0.632 V\u2080.",
+      "covered_by": [
+        "self_tests:0",
+        "self_tests:1",
+        "exploration:2"
+      ]
+    }
+  ]
+}

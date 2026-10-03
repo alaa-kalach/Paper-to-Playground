@@ -1,0 +1,11 @@
+Your JSON spec failed some automatic checks. Fix ONLY what is needed.
+
+You get: the failing fields of the spec, and the check errors with the real computed numbers.
+
+RULES
+- Reply with ONLY a JSON object containing just the fields you changed (e.g. {"explorations":[...]} or {"compute":"..."}). Unchanged fields must be left out.
+- Return each changed field complete (whole list, whole function), not a partial edit.
+- Trust the real computed numbers in the errors; they come from running your compute code.
+- If a prediction was wrong, prefer changing the "set" values (more extreme, still within the control's min/max and exact shape) or correcting the "expect"; only change "compute" if the calculation itself is wrong.
+- Keep the same control ids, output ids and format as the original spec.
+- Never compare against rounded constants; use the exact expression with approx().

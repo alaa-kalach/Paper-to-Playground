@@ -41,15 +41,27 @@ print("saved out_specs/" + name)
 
 import quickjs
 ctx = quickjs.Context()
+ctx.eval("""
+function approx(a,b,t){ if(t===undefined) t=1e-6; return Math.abs(a-b)<=t; }
+function sum(a){ return a.reduce(function(s,v){return s+v;},0); }
+function max(a){ return Math.max.apply(null,a); }
+function min(a){ return Math.min.apply(null,a); }
+function all(a,f){ return a.every(f); }
+""")
 ctx.eval(spec["compute"])
 defaults = {c["id"]: c.get("default") for c in spec["controls"]}
 
 def run(over, expr):
-    x = {**defaults, **over}
-    return ctx.eval(f"(function(){{var o=compute({json.dumps(x)}); return ({expr});}})()")
+    inp = {**defaults, **over}
+    js = ("(function(){var inp=%s; var out=compute(inp); var base=compute(%s); return (%s);})()"
+          % (json.dumps(inp), json.dumps(defaults), expr))
+    return ctx.eval(js)
 
-print("default output:", run({}, "JSON.stringify(o)")[:300])
+print("default output:", run({}, "JSON.stringify(out)")[:300])
+returned = json.loads(run({}, "JSON.stringify(Object.keys(out))"))
+for o in spec["outputs"]:
+    print("output", o["id"], "returned:", o["id"] in returned)
 for e in spec["explorations"]:
     print("exploration", repr(e["title"]), "->", run(e["set"], e["expect"]))
-for s in spec["selftests"]:
-    print("selftest", repr(s["why"]), "->", run(s["set"], s["assert"]))
+for s in spec["self_tests"]:
+    print("selftest", repr(s["name"]), "->", run(s["set"], s["expect"]))

@@ -1,0 +1,5 @@
+{
+  "source_url": "https://en.wikipedia.org/wiki/RC_circuit",
+  "focus": "Charging of a capacitor in a series RC circuit. Explain the time constant tau = RC and the exponential charging curve V(t) = V0(1 - e^{-t/tau}). Let the learner change R, C and the supply voltage. Show the voltage curve over time and mark one time constant. Guide them to see that after one tau the capacitor reaches about 63% and after five tau it is almost full. Check that V(0)=0 and V(tau) = 0.632*V0.",
+  "audience": "Engineering undergraduate"
+}
