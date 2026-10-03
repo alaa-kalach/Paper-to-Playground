@@ -74,7 +74,7 @@ class Agent:
             self.trace.event("input", "read_case", "fail", error=f"{type(e).__name__}: {e}")
             return False
         missing = [k for k in REQUIRED if not isinstance(case.get(k), str) or not case[k].strip()]
-        self.case = {k: case.get(k, "") for k in REQUIRED}
+        self.case = {k: v for k, v in case.items() if isinstance(v, str)}
         if missing:
             self.trace.event("input", "validate_case", "fail", missing=missing)
             return False
