@@ -6,9 +6,9 @@
     "year": 2017,
     "url": "https://arxiv.org/html/1706.03762v7",
     "section": "3.2.1",
-    "equation": "\\text{Attention}(Q,K,V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V"
+    "equation": "1"
   },
-  "hook": "How does a model decide which words to focus on? Scaled dot-product attention computes similarity scores, turns them into weights, and mixes values. Edit the matrices to see it in action.",
+  "hook": "How does a Transformer decide which words to focus on? It compares queries to keys, turns similarities into weights, and mixes values. Edit the matrices below to see it happen.",
   "symbols": [
     {
       "symbol": "Q",
@@ -27,24 +27,29 @@
     },
     {
       "symbol": "d_k",
-      "meaning": "Dimension of keys/queries (here 2)",
+      "meaning": "Dimension of keys/queries",
       "source": "paper"
     },
     {
       "symbol": "\\text{softmax}",
-      "meaning": "Normalizes each row to sum to 1",
+      "meaning": "Normalizes scores to a probability distribution",
       "source": "paper"
     },
     {
-      "symbol": "\\sqrt{d_k}",
-      "meaning": "Scaling factor",
+      "symbol": "\\text{Attention}(Q,K,V)",
+      "meaning": "Output matrix",
       "source": "paper"
+    },
+    {
+      "symbol": "\\text{scale}",
+      "meaning": "Whether to divide by sqrt(d_k)",
+      "source": "ours"
     }
   ],
   "equation": {
-    "latex": "\\text{Attention}(Q,K,V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V",
+    "latex": "\\text{Attention}(Q,K,V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right) V",
     "source": "paper",
-    "caption": "Scaled dot-product attention."
+    "caption": "Scaled dot-product attention. When scaling is off, we omit the division by sqrt(d_k)."
   },
   "controls": [
     {
@@ -53,8 +58,8 @@
       "label": "Query matrix Q (2x2)",
       "rows": 2,
       "cols": 2,
-      "min": -2,
-      "max": 2,
+      "min": -3,
+      "max": 3,
       "step": 0.5,
       "default": [
         [
@@ -81,8 +86,8 @@
       "label": "Key matrix K (2x2)",
       "rows": 2,
       "cols": 2,
-      "min": -2,
-      "max": 2,
+      "min": -3,
+      "max": 3,
       "step": 0.5,
       "default": [
         [
@@ -109,8 +114,8 @@
       "label": "Value matrix V (2x2)",
       "rows": 2,
       "cols": 2,
-      "min": -2,
-      "max": 2,
+      "min": -3,
+      "max": 3,
       "step": 0.5,
       "default": [
         [
@@ -132,18 +137,18 @@
       ]
     },
     {
-      "id": "scaling",
+      "id": "scale",
       "type": "toggle",
-      "label": "Apply scaling (divide by sqrt(d_k))",
+      "label": "Scale by 1/sqrt(d_k)",
       "default": true
     }
   ],
-  "compute": "function compute(inputs) {\n  const Q = inputs.Q;\n  const K = inputs.K;\n  const V = inputs.V;\n  const scaling = inputs.scaling;\n  const dk = Q[0].length;\n  const scale = scaling ? Math.sqrt(dk) : 1;\n  const n = Q.length;\n  const m = K.length;\n  const scores = [];\n  for (let i = 0; i < n; i++) {\n    scores[i] = [];\n    for (let j = 0; j < m; j++) {\n      let dot = 0;\n      for (let k = 0; k < dk; k++) {\n        dot += Q[i][k] * K[j][k];\n      }\n      scores[i][j] = dot / scale;\n    }\n  }\n  const weights = [];\n  for (let i = 0; i < n; i++) {\n    const row = scores[i];\n    const maxScore = Math.max(...row);\n    const exps = row.map(s => Math.exp(s - maxScore));\n    const sumExps = exps.reduce((a, b) => a + b, 0);\n    weights[i] = exps.map(e => e / sumExps);\n  }\n  const output = [];\n  for (let i = 0; i < n; i++) {\n    output[i] = [];\n    for (let d = 0; d < V[0].length; d++) {\n      let sum = 0;\n      for (let j = 0; j < m; j++) {\n        sum += weights[i][j] * V[j][d];\n      }\n      output[i][d] = sum;\n    }\n  }\n  const tableRows = [];\n  for (let i = 0; i < n; i++) {\n    for (let j = 0; j < m; j++) {\n      tableRows.push([`q${i+1}`, `k${j+1}`, scores[i][j].toFixed(3), weights[i][j].toFixed(3)]);\n    }\n  }\n  const table = {\n    columns: ['Query', 'Key', 'Score', 'Weight'],\n    rows: tableRows\n  };\n  const rowSums = weights.map(row => row.reduce((a, b) => a + b, 0));\n  const maxWeight = Math.max(...weights.flat());\n  const insight = `Row sums of weights: ${rowSums.map(s => s.toFixed(3)).join(', ')}. Max weight: ${maxWeight.toFixed(3)}. ${scaling ? 'Scaling applied.' : 'No scaling.'}`;\n  return {\n    scores: scores,\n    weights: weights,\n    output: output,\n    table: table,\n    insight: insight\n  };\n}",
+  "compute": "function compute(inputs) {\n  const Q = inputs.Q;\n  const K = inputs.K;\n  const V = inputs.V;\n  const scale = inputs.scale;\n  const dk = K[0].length;\n  const sqrt_dk = Math.sqrt(dk);\n  const scaleFactor = scale ? 1 / sqrt_dk : 1;\n  const n = Q.length;\n  const m = K.length;\n  const scores = [];\n  for (let i = 0; i < n; i++) {\n    scores[i] = [];\n    for (let j = 0; j < m; j++) {\n      let dot = 0;\n      for (let k = 0; k < dk; k++) {\n        dot += Q[i][k] * K[j][k];\n      }\n      scores[i][j] = dot * scaleFactor;\n    }\n  }\n  const weights = [];\n  for (let i = 0; i < n; i++) {\n    const row = scores[i];\n    const maxScore = Math.max(...row);\n    const exps = row.map(s => Math.exp(s - maxScore));\n    const sumExps = exps.reduce((a, b) => a + b, 0);\n    weights[i] = exps.map(e => e / sumExps);\n  }\n  const output = [];\n  for (let i = 0; i < n; i++) {\n    output[i] = [];\n    for (let d = 0; d < V[0].length; d++) {\n      let sum = 0;\n      for (let j = 0; j < m; j++) {\n        sum += weights[i][j] * V[j][d];\n      }\n      output[i][d] = sum;\n    }\n  }\n  const tableRows = [];\n  for (let i = 0; i < n; i++) {\n    for (let j = 0; j < m; j++) {\n      tableRows.push([\n        `q${i+1}, k${j+1}`,\n        scores[i][j].toFixed(3),\n        weights[i][j].toFixed(3),\n        (weights[i][j] * V[j][0]).toFixed(3),\n        (weights[i][j] * V[j][1]).toFixed(3)\n      ]);\n    }\n  }\n  const table = {\n    columns: ['pair', 'score', 'weight', 'weight*V1', 'weight*V2'],\n    rows: tableRows\n  };\n  const rowSums = weights.map(row => row.reduce((a, b) => a + b, 0));\n  const maxWeight = Math.max(...weights.flat());\n  const minWeight = Math.min(...weights.flat());\n  let insight = '';\n  if (maxWeight > 0.9) {\n    insight = 'One weight is very high (>0.9), so the output is almost entirely that value vector.';\n  } else if (maxWeight - minWeight < 0.1) {\n    insight = 'All weights are similar, so the output is close to the average of the value vectors.';\n  } else {\n    insight = 'Weights are moderately spread; the output mixes the value vectors.';\n  }\n  if (!scale) {\n    insight += ' Without scaling, scores are larger, making the softmax more peaked.';\n  } else {\n    insight += ' With scaling, scores are divided by sqrt(d_k), keeping the softmax smoother.';\n  }\n  return {\n    scores: scores,\n    weights: weights,\n    output: output,\n    table: table,\n    rowSums: rowSums,\n    insight: insight\n  };\n}",
   "outputs": [
     {
       "id": "scores",
       "type": "matrix",
-      "label": "Similarity scores (QK^T / scale)",
+      "label": "Similarity scores (QK^T / sqrt(d_k))",
       "row_labels": [
         "query 1",
         "query 2"
@@ -156,7 +161,7 @@
     {
       "id": "weights",
       "type": "matrix",
-      "label": "Attention weights (softmax)",
+      "label": "Attention weights (softmax of scores)",
       "row_labels": [
         "query 1",
         "query 2"
@@ -169,7 +174,7 @@
     {
       "id": "output",
       "type": "matrix",
-      "label": "Output (weights * V)",
+      "label": "Output (weighted sum of V)",
       "row_labels": [
         "query 1",
         "query 2"
@@ -182,20 +187,31 @@
     {
       "id": "table",
       "type": "table",
-      "label": "Per-pair scores and weights",
+      "label": "Intermediate quantities per query-key pair",
       "columns": [
-        "Query",
-        "Key",
-        "Score",
-        "Weight"
+        "pair",
+        "score",
+        "weight",
+        "weight*V1",
+        "weight*V2"
+      ]
+    },
+    {
+      "id": "rowSums",
+      "type": "vector",
+      "label": "Row sums of weights (should be 1)",
+      "labels": [
+        "query 1",
+        "query 2"
       ]
     }
   ],
   "steps": [
     "Compute dot products: \\( \\text{scores} = Q K^T \\)",
-    "Scale: \\( \\text{scores} = \\text{scores} / \\sqrt{d_k} \\) (if scaling on)",
-    "Apply softmax row-wise: \\( w_{ij} = \\frac{\\exp(\\text{score}_{ij})}{\\sum_j \\exp(\\text{score}_{ij})} \\)",
-    "Output: \\( \\text{output}_i = \\sum_j w_{ij} V_j \\)"
+    "Scale: \\( \\text{scores} = \\text{scores} / \\sqrt{d_k} \\) (if scaling is on)",
+    "Apply softmax row-wise: \\( \\text{weights} = \\text{softmax}(\\text{scores}) \\)",
+    "Compute output: \\( \\text{output} = \\text{weights} \\cdot V \\)",
+    "Check: each row of weights sums to 1. Row sums: {{rowSums}}"
   ],
   "explorations": [
     {
@@ -232,11 +248,11 @@
             1
           ]
         ],
-        "scaling": true
+        "scale": true
       },
-      "observe": "All weights become 0.5, so the output is the average of the two value vectors.",
-      "why": "When scores are equal, softmax gives uniform weights. The output is the weighted sum of V with equal weights.",
-      "expect": "approx(out.weights[0][0], 0.5, 1e-6) && approx(out.weights[0][1], 0.5, 1e-6)"
+      "observe": "All weights become 0.5, so the output is the average of the value vectors.",
+      "why": "When scores are equal, softmax gives uniform weights: each weight = 1/n. The output is then the average of the value vectors.",
+      "expect": "approx(out.weights[0][0], 0.5, 1e-6) && approx(out.weights[0][1], 0.5, 1e-6) && approx(out.output[0][0], 0.5, 1e-6) && approx(out.output[0][1], 0.5, 1e-6)"
     },
     {
       "title": "Dominant score",
@@ -244,17 +260,17 @@
       "set": {
         "Q": [
           [
-            2,
+            1,
             0
           ],
           [
-            0,
-            1
+            1,
+            0
           ]
         ],
         "K": [
           [
-            2,
+            1,
             0
           ],
           [
@@ -272,18 +288,18 @@
             1
           ]
         ],
-        "scaling": true
+        "scale": true
       },
-      "observe": "The weight for the matching key becomes close to 1, and the output is almost the corresponding value vector.",
-      "why": "A large score gap makes the softmax concentrate on the largest score, so the output is dominated by the corresponding value.",
-      "expect": "out.weights[0][0] > 0.9"
+      "observe": "The weight for the first key becomes close to 1, so the output is almost exactly the first value vector.",
+      "why": "A large score gap makes softmax assign nearly all weight to the largest score. The output then approximates that value vector.",
+      "expect": "out.weights[0][0] > 0.9 && approx(out.output[0][0], 1, 1e-2) && approx(out.output[0][1], 0, 1e-2)"
     }
   ],
   "self_tests": [
     {
-      "name": "Weights sum to 1",
+      "name": "Row sums of weights equal 1",
       "set": {},
-      "expect": "approx(sum(out.weights[0]), 1, 1e-6) && approx(sum(out.weights[1]), 1, 1e-6)"
+      "expect": "approx(out.rowSums[0], 1, 1e-6) && approx(out.rowSums[1], 1, 1e-6)"
     },
     {
       "name": "Output equals weighted sum of V",
@@ -293,122 +309,68 @@
     {
       "name": "Scaling reduces score magnitude",
       "set": {
-        "Q": [
-          [
-            2,
-            0
-          ],
-          [
-            0,
-            2
-          ]
-        ],
-        "K": [
-          [
-            2,
-            0
-          ],
-          [
-            0,
-            2
-          ]
-        ],
-        "V": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "scaling": true
+        "scale": false
       },
-      "expect": "approx(out.scores[0][0], (2*2 + 0*0)/Math.sqrt(2), 1e-6)"
-    },
-    {
-      "name": "No scaling gives raw dot product",
-      "set": {
-        "Q": [
-          [
-            2,
-            0
-          ],
-          [
-            0,
-            2
-          ]
-        ],
-        "K": [
-          [
-            2,
-            0
-          ],
-          [
-            0,
-            2
-          ]
-        ],
-        "V": [
-          [
-            1,
-            0
-          ],
-          [
-            0,
-            1
-          ]
-        ],
-        "scaling": false
-      },
-      "expect": "approx(out.scores[0][0], 4, 1e-6)"
+      "expect": "Math.abs(out.scores[0][0]) >= Math.abs(base.scores[0][0])"
     }
   ],
   "limitation": "This demo uses tiny 2x2 matrices and does not include multiple attention heads, masking, or training. It only illustrates the core computation of scaled dot-product attention.",
-  "misconception": "Attention weights are not learned parameters; they are computed from the inputs. The scaling factor prevents large dot products from making softmax too sharp.",
+  "misconception": "Attention weights are not learned parameters; they are computed from the inputs Q and K. The only learned parameters in a Transformer are the projection matrices that produce Q, K, and V.",
   "claims": [
     {
-      "text": "Scaled dot-product attention computes softmax(QK^T/sqrt(d_k))V.",
+      "text": "Scaled dot-product attention computes softmax(QK^T / sqrt(d_k)) V.",
       "source": "paper"
     },
     {
-      "text": "The scaling factor is 1/sqrt(d_k) where d_k is the key dimension.",
+      "text": "The scaling factor 1/sqrt(d_k) prevents the dot products from growing too large, which would make the softmax very peaked.",
       "source": "paper"
     },
     {
-      "text": "In this toy setup, we use 2x2 matrices and no masking or multiple heads.",
+      "text": "In this toy setup, we use 2x2 matrices and omit multi-head attention and masking.",
       "source": "ours"
     }
   ],
   "outcomes": [
     {
-      "outcome": "Compute similarity scores between queries and keys.",
+      "outcome": "Compute similarity scores between queries and keys",
       "covered_by": [
         "output:scores",
         "table"
       ]
     },
     {
-      "outcome": "Apply softmax to get attention weights that sum to 1.",
+      "outcome": "Apply softmax to obtain attention weights",
       "covered_by": [
         "output:weights",
+        "table"
+      ]
+    },
+    {
+      "outcome": "Compute the output as a weighted sum of values",
+      "covered_by": [
+        "output:output",
+        "table"
+      ]
+    },
+    {
+      "outcome": "Explain the effect of scaling by 1/sqrt(d_k)",
+      "covered_by": [
+        "control:scale",
+        "exploration:2",
+        "self_tests:2"
+      ]
+    },
+    {
+      "outcome": "Verify that each row of weights sums to 1",
+      "covered_by": [
+        "output:rowSums",
         "self_tests:0"
       ]
     },
     {
-      "outcome": "Compute the output as a weighted sum of values.",
+      "outcome": "Verify that the output equals the weighted sum of V",
       "covered_by": [
-        "output:output",
         "self_tests:1"
-      ]
-    },
-    {
-      "outcome": "Explain the effect of scaling on the softmax distribution.",
-      "covered_by": [
-        "exploration:1",
-        "self_tests:2",
-        "self_tests:3"
       ]
     }
   ]

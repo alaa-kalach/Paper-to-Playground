@@ -1,25 +1,18 @@
 {
-  "title": "Shannon Entropy: Measuring Uncertainty",
+  "title": "Discrete Entropy: Measuring Uncertainty",
   "paper": {
     "title": "A Mathematical Theory of Communication",
-    "authors": [
-      "Claude E. Shannon"
-    ],
+    "authors": "Claude E. Shannon",
     "year": 1948,
     "url": "https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf",
     "section": "6",
     "equation": "H = -\\sum_{i=1}^{n} p_i \\log_2 p_i"
   },
-  "hook": "How many bits does it take to describe the outcome of a random experiment? Shannon's entropy gives the answer.",
+  "hook": "How many bits does it take to describe the outcome of a random experiment? Change the probabilities and see.",
   "symbols": [
     {
       "symbol": "p_i",
       "meaning": "Probability of outcome i",
-      "source": "paper"
-    },
-    {
-      "symbol": "n",
-      "meaning": "Number of possible outcomes",
       "source": "paper"
     },
     {
@@ -28,9 +21,9 @@
       "source": "paper"
     },
     {
-      "symbol": "\\log_2",
-      "meaning": "Logarithm base 2",
-      "source": "paper"
+      "symbol": "n",
+      "meaning": "Number of outcomes",
+      "source": "ours"
     }
   ],
   "equation": {
@@ -39,26 +32,6 @@
     "caption": "Entropy of a discrete probability distribution."
   },
   "controls": [
-    {
-      "id": "n",
-      "type": "select",
-      "label": "Number of outcomes",
-      "options": [
-        {
-          "value": "2",
-          "label": "2"
-        },
-        {
-          "value": "3",
-          "label": "3"
-        },
-        {
-          "value": "4",
-          "label": "4"
-        }
-      ],
-      "default": "4"
-    },
     {
       "id": "probs",
       "type": "vector",
@@ -79,9 +52,19 @@
         "p3",
         "p4"
       ]
+    },
+    {
+      "id": "n",
+      "type": "slider",
+      "label": "Number of outcomes",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "default": 4,
+      "symbol": "n"
     }
   ],
-  "compute": "function compute(inputs){\n  const n = parseInt(inputs.n);\n  let raw = inputs.probs.slice(0, n);\n  let sum = raw.reduce((a,b)=>a+b,0);\n  let warning = '';\n  if (sum === 0) {\n    warning = 'All probabilities zero; using uniform distribution.';\n    raw = Array(n).fill(1/n);\n    sum = 1;\n  }\n  const p = raw.map(x => x / sum);\n  const contributions = p.map(pi => pi === 0 ? 0 : -pi * Math.log2(pi));\n  const H = contributions.reduce((a,b)=>a+b,0);\n  const maxH = Math.log2(n);\n  const table = {\n    columns: ['Outcome', 'Probability', 'Contribution (bits)'],\n    rows: p.map((pi, i) => [i+1, pi.toFixed(4), contributions[i].toFixed(4)])\n  };\n  const insight = `Entropy = ${H.toFixed(4)} bits. Maximum for ${n} outcomes is ${maxH.toFixed(4)} bits. ${H === 0 ? 'Certainty gives zero bits.' : H === maxH ? 'Uniform distribution achieves maximum entropy.' : 'Distribution is not uniform.'}`;\n  return {\n    H: H,\n    maxH: maxH,\n    table: table,\n    insight: insight,\n    warning: warning\n  };\n}",
+  "compute": "function compute(inputs){ const raw = inputs.probs.slice(0, inputs.n); const sumRaw = raw.reduce((a,b)=>a+b,0); let p = raw.map(x=> x/sumRaw); if(sumRaw===0){ p = raw.map(()=> 1/raw.length); } const contributions = p.map(pi => pi>0 ? -pi*Math.log2(pi) : 0); const H = contributions.reduce((a,b)=>a+b,0); const tableRows = p.map((pi,i)=> [i+1, pi, pi>0 ? -Math.log2(pi) : 0, contributions[i]]); const maxH = Math.log2(p.length); const insight = `Entropy = ${H.toFixed(3)} bits. Maximum for ${p.length} outcomes is ${maxH.toFixed(3)} bits.`; return { H, p, contributions, table: { columns: ['Outcome','p_i','-log2 p_i','Contribution'], rows: tableRows }, insight }; }",
   "outputs": [
     {
       "id": "H",
@@ -90,126 +73,140 @@
       "unit": "bits"
     },
     {
-      "id": "maxH",
-      "type": "scalar",
-      "label": "Maximum entropy",
-      "unit": "bits"
+      "id": "p",
+      "type": "vector",
+      "label": "Normalized probabilities",
+      "labels": [
+        "p1",
+        "p2",
+        "p3",
+        "p4"
+      ]
+    },
+    {
+      "id": "contributions",
+      "type": "vector",
+      "label": "Contributions to H",
+      "labels": [
+        "c1",
+        "c2",
+        "c3",
+        "c4"
+      ]
     },
     {
       "id": "table",
       "type": "table",
-      "label": "Probabilities and contributions",
+      "label": "Intermediate quantities",
       "columns": [
         "Outcome",
-        "Probability",
-        "Contribution (bits)"
-      ]
+        "p_i",
+        "-log2 p_i",
+        "Contribution"
+      ],
+      "rows": []
     }
   ],
   "steps": [
-    "H = -\\sum_{i=1}^{n} p_i \\log_2 p_i",
-    "n = {{n}}",
-    "H = {{H}} \\text{ bits}",
-    "\\text{Maximum entropy for } n \\text{ outcomes: } \\log_2 n = {{maxH}} \\text{ bits}"
+    "Normalize probabilities: p_i = \\frac{p_i^{\\text{raw}}}{\\sum_j p_j^{\\text{raw}}}",
+    "For each outcome, compute self-information: -\\log_2 p_i",
+    "Contribution: -p_i \\log_2 p_i",
+    "Total entropy: H = \\sum_i -p_i \\log_2 p_i = {{H}} bits"
   ],
   "explorations": [
     {
       "title": "Certainty vs. Uncertainty",
-      "predict": "What happens to entropy when one outcome is certain?",
+      "predict": "If one outcome has probability 1, what is the entropy?",
       "set": {
-        "n": "2",
         "probs": [
           1,
           0,
           0,
           0
-        ]
+        ],
+        "n": 4
       },
-      "observe": "Entropy is 0 bits.",
-      "why": "When p_i = 1 for one outcome, its contribution is -1 * log2(1) = 0, and all other p_i = 0 contribute 0 (since 0 log 0 = 0). So H = 0.",
+      "observe": "Entropy is 0 bits. The table shows only one non-zero contribution.",
+      "why": "When p_i=1, -p_i log2 p_i = 0, and all other terms are 0 (since 0 log 0 = 0). So H=0.",
       "expect": "approx(out.H, 0, 1e-6)"
     },
     {
-      "title": "Uniform Distribution",
-      "predict": "What is the entropy when all outcomes are equally likely?",
+      "title": "Equally Likely Outcomes",
+      "predict": "If four outcomes are equally likely, what is the entropy?",
       "set": {
-        "n": "4",
         "probs": [
           0.25,
           0.25,
           0.25,
           0.25
-        ]
+        ],
+        "n": 4
       },
       "observe": "Entropy is 2 bits.",
-      "why": "For n equally likely outcomes, each p_i = 1/n, so H = -n * (1/n) * log2(1/n) = log2(n). For n=4, log2(4)=2.",
+      "why": "Each outcome has p_i=1/4, so -log2(1/4)=2, and each contributes 0.25*2=0.5. Summing four gives 2 bits.",
       "expect": "approx(out.H, 2, 1e-6)"
     }
   ],
   "self_tests": [
     {
-      "name": "Zero entropy for certain outcome",
+      "name": "Zero probability handled",
       "set": {
-        "n": "2",
-        "probs": [
-          1,
-          0,
-          0,
-          0
-        ]
-      },
-      "expect": "approx(out.H, 0, 1e-6)"
-    },
-    {
-      "name": "Maximum entropy for uniform 4 outcomes",
-      "set": {
-        "n": "4",
-        "probs": [
-          0.25,
-          0.25,
-          0.25,
-          0.25
-        ]
-      },
-      "expect": "approx(out.H, 2, 1e-6)"
-    },
-    {
-      "name": "Entropy less than maximum for non-uniform",
-      "set": {
-        "n": "3",
         "probs": [
           0.5,
-          0.25,
-          0.25,
+          0.5,
+          0,
           0
-        ]
+        ],
+        "n": 4
       },
-      "expect": "out.H < out.maxH"
+      "expect": "approx(out.H, 1, 1e-6)"
+    },
+    {
+      "name": "Three equally likely",
+      "set": {
+        "probs": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "n": 3
+      },
+      "expect": "approx(out.H, Math.log2(3), 1e-6)"
+    },
+    {
+      "name": "Auto-normalization",
+      "set": {
+        "probs": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "n": 4
+      },
+      "expect": "approx(out.H, 2, 1e-6)"
     }
   ],
-  "limitation": "This interactive assumes a discrete, finite probability distribution with no memory or correlation between outcomes. Real-world sources often have dependencies or continuous distributions, which require different entropy measures.",
-  "misconception": "Entropy is not a measure of disorder or randomness in a physical sense; it quantifies the average uncertainty or information content in bits for a given probability distribution.",
+  "limitation": "This model assumes outcomes are independent and identically distributed; it does not capture entropy of sequences with memory or continuous variables.",
+  "misconception": "Entropy is not the number of outcomes; it depends on their probabilities. A certain outcome has zero entropy.",
   "claims": [
     {
       "text": "Entropy is defined as H = -\\sum p_i \\log_2 p_i.",
       "source": "paper"
     },
     {
-      "text": "For a certain outcome, entropy is zero.",
+      "text": "For a uniform distribution over n outcomes, H = \\log_2 n.",
       "source": "paper"
     },
     {
-      "text": "For n equally likely outcomes, entropy is log2(n) bits.",
-      "source": "paper"
-    },
-    {
-      "text": "Our toy model normalizes probabilities and treats 0 log 0 as 0.",
+      "text": "Our toy uses up to 4 outcomes and normalizes probabilities automatically.",
       "source": "ours"
     }
   ],
   "outcomes": [
     {
-      "outcome": "Compute entropy for a given discrete probability distribution.",
+      "outcome": "Compute entropy from a probability distribution.",
       "covered_by": [
         "control:probs",
         "output:H",
@@ -217,23 +214,23 @@
       ]
     },
     {
-      "outcome": "Explain why certainty yields zero entropy.",
+      "outcome": "Explain why certainty gives zero bits.",
       "covered_by": [
         "exploration:1",
-        "output:H"
+        "output:table"
       ]
     },
     {
-      "outcome": "Verify that four equally likely outcomes give 2 bits of entropy.",
+      "outcome": "Show that four equally likely outcomes give two bits.",
       "covered_by": [
         "exploration:2",
         "output:H"
       ]
     },
     {
-      "outcome": "Handle zero probabilities correctly in entropy calculation.",
+      "outcome": "Handle zero probabilities correctly.",
       "covered_by": [
-        "compute",
+        "self_tests:1",
         "output:table"
       ]
     }

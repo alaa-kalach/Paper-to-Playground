@@ -1,14 +1,14 @@
 {
-  "title": "Softmax with Temperature: Distilling Knowledge",
+  "title": "Temperature in Softmax Distillation",
   "paper": {
     "title": "Distilling the Knowledge in a Neural Network",
-    "authors": "Hinton, Vinyals, Dean",
-    "year": 2015,
+    "authors": null,
+    "year": null,
     "url": "https://arxiv.org/abs/1503.02531",
     "section": "Section 2",
     "equation": null
   },
-  "hook": "How can a neural network teach another network? The secret is in the softmax temperature. Adjust the logits and temperature to see how the probability distribution changes.",
+  "hook": "How does a neural network reveal its 'dark knowledge'? By softening its softmax outputs with a temperature parameter. Explore how temperature controls the softness of a probability distribution.",
   "symbols": [
     {
       "symbol": "z_i",
@@ -17,7 +17,7 @@
     },
     {
       "symbol": "T",
-      "meaning": "temperature parameter",
+      "meaning": "temperature parameter (T > 0)",
       "source": "paper"
     },
     {
@@ -26,15 +26,15 @@
       "source": "paper"
     },
     {
-      "symbol": "q_i",
-      "meaning": "softmax probability with temperature T",
-      "source": "paper"
+      "symbol": "K",
+      "meaning": "number of classes",
+      "source": "ours"
     }
   ],
   "equation": {
-    "latex": "q_i = \\frac{\\exp(z_i / T)}{\\sum_j \\exp(z_j / T)}",
+    "latex": "p_i = \\frac{\\exp(z_i / T)}{\\sum_{j=1}^K \\exp(z_j / T)}",
     "source": "paper",
-    "caption": "Softmax with temperature T. When T=1, it's the standard softmax."
+    "caption": "Softmax with temperature T. Higher T produces a softer distribution."
   },
   "controls": [
     {
@@ -69,12 +69,12 @@
       "symbol": "T"
     }
   ],
-  "compute": "function compute(inputs) {\n  const z = inputs.logits;\n  const T = inputs.T;\n  const n = z.length;\n  // Compute exp(z_i / T)\n  const expZ = z.map(zi => Math.exp(zi / T));\n  const sumExp = expZ.reduce((a, b) => a + b, 0);\n  const q = expZ.map(e => e / sumExp);\n  // Build table\n  const table = {\n    columns: ['Class', 'z_i', 'exp(z_i/T)', 'q_i'],\n    rows: z.map((zi, i) => [i+1, zi.toFixed(2), expZ[i].toFixed(4), q[i].toFixed(4)])\n  };\n  // Insight\n  const maxQ = Math.max(...q);\n  const minQ = Math.min(...q);\n  const uniform = 1/n;\n  let insight = '';\n  if (T > 5) {\n    insight = `High T (${T.toFixed(1)}) makes distribution nearly uniform (each ~${uniform.toFixed(3)}).`;\n  } else if (T < 0.5) {\n    insight = `Low T (${T.toFixed(1)}) makes distribution sharp: max prob = ${maxQ.toFixed(3)}.`;\n  } else {\n    insight = `Moderate T (${T.toFixed(1)}): max prob = ${maxQ.toFixed(3)}, min prob = ${minQ.toFixed(3)}.`;\n  }\n  return {\n    q: q,\n    table: table,\n    insight: insight\n  };\n}",
+  "compute": "function compute(inputs) {\n  const z = inputs.logits;\n  const T = inputs.T;\n  const K = z.length;\n  // Compute exp(z_i / T)\n  const expZ = z.map(zi => Math.exp(zi / T));\n  const sumExp = expZ.reduce((a, b) => a + b, 0);\n  const p = expZ.map(e => e / sumExp);\n  // Build table rows: class, z_i, exp(z_i/T), p_i\n  const rows = [];\n  for (let i = 0; i < K; i++) {\n    rows.push([`Class ${i+1}`, z[i].toFixed(2), expZ[i].toFixed(4), p[i].toFixed(4)]);\n  }\n  // Insight: compare max probability to uniform 1/K\n  const maxP = Math.max(...p);\n  const uniform = 1 / K;\n  let insight = '';\n  if (Math.abs(maxP - uniform) < 0.01) {\n    insight = `Distribution is nearly uniform (max p = ${maxP.toFixed(3)} \u2248 1/${K} = ${uniform.toFixed(3)}).`;\n  } else if (maxP > 0.9) {\n    insight = `Distribution is very sharp (max p = ${maxP.toFixed(3)}).`;\n  } else {\n    insight = `Max probability is ${maxP.toFixed(3)}.`;\n  }\n  return {\n    probabilities: p,\n    table: {\n      columns: ['Class', 'z_i', 'exp(z_i/T)', 'p_i'],\n      rows: rows\n    },\n    insight: insight\n  };\n}",
   "outputs": [
     {
-      "id": "q",
+      "id": "probabilities",
       "type": "vector",
-      "label": "Softmax probabilities (q)",
+      "label": "Softmax probabilities",
       "labels": [
         "Class 1",
         "Class 2",
@@ -90,16 +90,15 @@
         "Class",
         "z_i",
         "exp(z_i/T)",
-        "q_i"
+        "p_i"
       ]
     }
   ],
   "steps": [
-    "Given logits \\(z = [{{logits}}]\\), temperature \\(T = {{T}}\\).",
-    "Compute \\(\\exp(z_i / T)\\) for each class.",
-    "Sum the exponentials: \\(\\sum_j \\exp(z_j / T)\\).",
-    "Divide each exponential by the sum to get \\(q_i\\).",
-    "The probabilities \\(q_i\\) sum to 1."
+    "Given logits \\(z_i\\) and temperature \\(T\\), compute \\(\\exp(z_i/T)\\) for each class.",
+    "Sum these exponentials: \\(S = \\sum_j \\exp(z_j/T)\\).",
+    "Divide each exponential by the sum: \\(p_i = \\exp(z_i/T) / S\\).",
+    "The probabilities \\(p_i\\) sum to 1: \\(\\sum_i p_i = 1\\)."
   ],
   "explorations": [
     {
@@ -108,64 +107,68 @@
       "set": {
         "T": 10
       },
-      "observe": "The probabilities become nearly uniform, each close to 0.25.",
-      "why": "As T increases, the exponent z_i/T becomes small, so exp(z_i/T) \u2248 1 + z_i/T. The differences between classes shrink, making the distribution approach uniform.",
-      "expect": "approx(out.q[0], 0.25, 0.05) && approx(out.q[1], 0.25, 0.05) && approx(out.q[2], 0.25, 0.05) && approx(out.q[3], 0.25, 0.05)"
+      "observe": "The probabilities become nearly uniform (all close to 0.25).",
+      "why": "As T \u2192 \u221e, z_i/T \u2192 0, so exp(z_i/T) \u2192 1 for all i, making p_i \u2192 1/K.",
+      "expect": "approx(max(out.probabilities), 0.25, 0.05)"
     },
     {
       "title": "Effect of low temperature",
-      "predict": "What happens to the probabilities when T is very small?",
+      "predict": "What happens when T is very small?",
       "set": {
         "T": 0.1
       },
-      "observe": "The largest logit dominates: its probability is close to 1, others close to 0.",
-      "why": "As T decreases, z_i/T becomes large in magnitude. The exponential of the largest z_i/T dominates the sum, so its probability approaches 1.",
-      "expect": "out.q[0] > 0.99"
+      "observe": "The largest logit dominates; its probability approaches 1.",
+      "why": "As T \u2192 0, differences in z_i/T are amplified, so the softmax approaches a one-hot distribution at the maximum logit.",
+      "expect": "out.probabilities[0] > 0.99"
     }
   ],
   "self_tests": [
     {
       "name": "Probabilities sum to 1",
       "set": {},
-      "expect": "approx(sum(out.q), 1, 1e-6)"
+      "expect": "approx(sum(out.probabilities), 1, 1e-6)"
     },
     {
-      "name": "At T=1, softmax matches standard",
-      "set": {
-        "T": 1
-      },
-      "expect": "approx(out.q[0], Math.exp(2)/(Math.exp(2)+Math.exp(1)+Math.exp(0)+Math.exp(-1)), 1e-6)"
-    },
-    {
-      "name": "High T approaches uniform",
+      "name": "Uniform at high T",
       "set": {
         "T": 100
       },
-      "expect": "approx(out.q[0], 0.25, 0.01) && approx(out.q[1], 0.25, 0.01) && approx(out.q[2], 0.25, 0.01) && approx(out.q[3], 0.25, 0.01)"
+      "expect": "approx(max(out.probabilities), 0.25, 0.01)"
+    },
+    {
+      "name": "Sharp at low T",
+      "set": {
+        "T": 0.01
+      },
+      "expect": "out.probabilities[0] > 0.999"
     }
   ],
-  "limitation": "This demonstration uses only 4 logits and a single temperature parameter. In real knowledge distillation, the teacher and student networks have many more classes, and the temperature is tuned along with other hyperparameters. Also, the softmax with temperature is applied to the teacher's logits to produce soft targets, but the student is trained on both soft targets and true labels.",
-  "misconception": "Temperature does not change the ranking of the logits; it only changes the confidence of the predicted probabilities. The most likely class remains the same for any T > 0.",
+  "limitation": "This demonstration uses a fixed set of logits and does not show how temperature affects the training of a distilled model, where the student is trained on the soft targets produced by the teacher.",
+  "misconception": "Temperature is not a parameter of the softmax function itself; it is a hyperparameter that controls the softness of the output distribution. It does not change the ranking of the logits.",
   "claims": [
     {
-      "text": "Softmax with temperature T is defined as q_i = exp(z_i/T) / sum_j exp(z_j/T).",
+      "text": "Softmax with temperature T is defined as p_i = exp(z_i/T) / sum_j exp(z_j/T).",
       "source": "paper"
     },
     {
-      "text": "High temperature produces a softer probability distribution over classes.",
+      "text": "As T approaches infinity, the softmax distribution approaches the uniform distribution.",
       "source": "paper"
     },
     {
-      "text": "In our toy setup, we use 4 logits and allow the user to adjust them and T to see the effect on the probabilities.",
+      "text": "As T approaches 0, the softmax distribution approaches a one-hot distribution at the maximum logit.",
+      "source": "paper"
+    },
+    {
+      "text": "In our toy setup, we use 4 logits and allow the user to adjust them and T to see the effect on probabilities.",
       "source": "ours"
     }
   ],
   "outcomes": [
     {
-      "outcome": "Explain how temperature affects the softmax distribution.",
+      "outcome": "Explain how temperature T affects the softmax distribution.",
       "covered_by": [
         "control:T",
-        "output:q",
+        "output:probabilities",
         "exploration:1",
         "exploration:2"
       ]
@@ -173,28 +176,23 @@
     {
       "outcome": "Compute softmax probabilities with temperature.",
       "covered_by": [
-        "control:logits",
-        "control:T",
-        "output:q",
-        "output:table",
-        "steps:1",
-        "steps:2",
-        "steps:3",
-        "steps:4"
+        "equation",
+        "compute",
+        "output:table"
       ]
     },
     {
       "outcome": "Verify that probabilities sum to 1.",
       "covered_by": [
-        "output:q",
         "self_tests:1"
       ]
     },
     {
-      "outcome": "Recognize that high T approaches uniform distribution.",
+      "outcome": "Recognize that high T leads to a softer distribution and low T to a sharper one.",
       "covered_by": [
         "exploration:1",
-        "self_tests:3"
+        "exploration:2",
+        "output:probabilities"
       ]
     }
   ]

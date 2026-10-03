@@ -1,45 +1,40 @@
 {
-  "title": "Bayes' Theorem and the Base Rate Fallacy",
+  "title": "Bayes' Theorem and the Base Rate Fallacy in Medical Testing",
   "paper": {
-    "title": "An Essay towards Solving a Problem in the Doctrine of Chances",
-    "authors": "Thomas Bayes",
+    "title": "An Essay towards solving a Problem in the Doctrine of Chances",
+    "authors": "Richard Bayes",
     "year": 1763,
     "url": "https://royalsocietypublishing.org/doi/10.1098/rstl.1763.0053",
     "section": null,
     "equation": null
   },
-  "hook": "A 99% accurate test for a rare disease can still be wrong most of the time when it says you're sick. Why?",
+  "hook": "A test that is 99% accurate can still be wrong most of the time it comes back positive. Change the prevalence and watch the posterior collapse.",
   "symbols": [
     {
       "symbol": "P(D)",
-      "meaning": "Prior probability of disease (prevalence)",
-      "source": "paper"
+      "meaning": "prior probability of disease (prevalence)",
+      "source": "ours"
     },
     {
       "symbol": "P(+|D)",
-      "meaning": "Sensitivity: probability of positive test given disease",
-      "source": "paper"
+      "meaning": "sensitivity: probability of a positive test given disease",
+      "source": "ours"
     },
     {
       "symbol": "P(+|\\neg D)",
-      "meaning": "False positive rate: probability of positive test given no disease",
-      "source": "paper"
+      "meaning": "false positive rate: probability of a positive test given no disease",
+      "source": "ours"
     },
     {
       "symbol": "P(D|+)",
-      "meaning": "Posterior probability of disease given a positive test",
-      "source": "paper"
-    },
-    {
-      "symbol": "N",
-      "meaning": "Total population size (1000)",
+      "meaning": "posterior probability of disease given a positive test",
       "source": "ours"
     }
   ],
   "equation": {
-    "latex": "P(D|+) = \\frac{P(+|D)P(D)}{P(+|D)P(D) + P(+|\\neg D)(1-P(D))}",
-    "source": "paper",
-    "caption": "Bayes' theorem for a binary test."
+    "latex": "P(D \\mid +) = \\frac{P(+ \\mid D)\\,P(D)}{P(+ \\mid D)\\,P(D) + P(+ \\mid \\neg D)\\,(1 - P(D))}",
+    "source": "ours",
+    "caption": "Posterior probability of disease after a positive test."
   },
   "controls": [
     {
@@ -53,7 +48,7 @@
       "symbol": "P(D)"
     },
     {
-      "id": "sensitivity",
+      "id": "sens",
       "type": "slider",
       "label": "Sensitivity P(+|D)",
       "min": 0.5,
@@ -70,10 +65,10 @@
       "max": 0.2,
       "step": 0.001,
       "default": 0.05,
-      "symbol": "P(+|\u00acD)"
+      "symbol": "P(+|\\neg D)"
     }
   ],
-  "compute": "function compute(inputs) {\n  const prior = inputs.prior;\n  const sens = inputs.sensitivity;\n  const fpr = inputs.fpr;\n  const N = 1000;\n  const pD = prior;\n  const pNotD = 1 - prior;\n  const pPos = sens * pD + fpr * pNotD;\n  const posterior = (sens * pD) / pPos;\n  const truePos = sens * pD * N;\n  const falsePos = fpr * pNotD * N;\n  const trueNeg = (1 - fpr) * pNotD * N;\n  const falseNeg = (1 - sens) * pD * N;\n  const table = {\n    columns: [\"Quantity\", \"Value\"],\n    rows: [\n      [\"P(D)\", pD.toFixed(4)],\n      [\"P(+|D)\", sens.toFixed(4)],\n      [\"P(+|\u00acD)\", fpr.toFixed(4)],\n      [\"P(+)\", pPos.toFixed(4)],\n      [\"P(D|+)\", posterior.toFixed(4)],\n      [\"True positives\", truePos.toFixed(1)],\n      [\"False positives\", falsePos.toFixed(1)],\n      [\"True negatives\", trueNeg.toFixed(1)],\n      [\"False negatives\", falseNeg.toFixed(1)]\n    ]\n  };\n  const insight = `With prevalence ${(prior*100).toFixed(1)}%, a positive test gives only ${(posterior*100).toFixed(1)}% chance of disease. ` +\n    `The test is ${(sens*100).toFixed(1)}% sensitive but ${(fpr*100).toFixed(1)}% false positive. ` +\n    `Out of ${N} people, ${truePos.toFixed(0)} true positives vs ${falsePos.toFixed(0)} false positives.`;\n  return {\n    posterior: posterior,\n    pPos: pPos,\n    truePos: truePos,\n    falsePos: falsePos,\n    trueNeg: trueNeg,\n    falseNeg: falseNeg,\n    table: table,\n    insight: insight\n  };\n}",
+  "compute": "function compute(inputs){\n  const prior = Math.min(Math.max(inputs.prior, 0), 1);\n  const sens = Math.min(Math.max(inputs.sens, 0), 1);\n  const fpr = Math.min(Math.max(inputs.fpr, 0), 1);\n  const N = 1000;\n  const tp = sens * prior;\n  const fp = fpr * (1 - prior);\n  const denom = tp + fp;\n  const posterior = denom > 0 ? tp / denom : 0;\n  const nD = prior * N;\n  const nNotD = (1 - prior) * N;\n  const nTP = tp * N;\n  const nFP = fp * N;\n  const nPos = denom * N;\n  const table = {\n    columns: [\"Quantity\", \"Symbol\", \"Value\"],\n    rows: [\n      [\"Prevalence\", \"P(D)\", prior.toFixed(4)],\n      [\"Sensitivity\", \"P(+|D)\", sens.toFixed(4)],\n      [\"False positive rate\", \"P(+|\\u00acD)\", fpr.toFixed(4)],\n      [\"Joint: disease & positive\", \"P(+|D)P(D)\", tp.toFixed(6)],\n      [\"Joint: no disease & positive\", \"P(+|\\u00acD)(1-P(D))\", fp.toFixed(6)],\n      [\"Total positive\", \"P(+)\", denom.toFixed(6)],\n      [\"Posterior\", \"P(D|+)\", posterior.toFixed(6)],\n      [\"People with disease (of 1000)\", \"n_D\", nD.toFixed(1)],\n      [\"True positives (of 1000)\", \"n_TP\", nTP.toFixed(1)],\n      [\"False positives (of 1000)\", \"n_FP\", nFP.toFixed(1)],\n      [\"All positives (of 1000)\", \"n_+\", nPos.toFixed(1)]\n    ]\n  };\n  const flow = {\n    nodes: [\n      {id: \"pop\", label: \"1000 people\", value: N},\n      {id: \"d\", label: \"Disease\", value: nD},\n      {id: \"nd\", label: \"No disease\", value: nNotD},\n      {id: \"tp\", label: \"True positive\", value: nTP},\n      {id: \"fn\", label: \"False negative\", value: nD - nTP},\n      {id: \"fp\", label: \"False positive\", value: nFP},\n      {id: \"tn\", label: \"True negative\", value: nNotD - nFP}\n    ],\n    edges: [\n      {from: \"pop\", to: \"d\", label: \"P(D)\", value: nD},\n      {from: \"pop\", to: \"nd\", label: \"1-P(D)\", value: nNotD},\n      {from: \"d\", to: \"tp\", label: \"P(+|D)\", value: nTP},\n      {from: \"d\", to: \"fn\", label: \"1-P(+|D)\", value: nD - nTP},\n      {from: \"nd\", to: \"fp\", label: \"P(+|\\u00acD)\", value: nFP},\n      {from: \"nd\", to: \"tn\", label: \"1-P(+|\\u00acD)\", value: nNotD - nFP}\n    ]\n  };\n  const insight = \"Posterior P(D|+) = \" + posterior.toFixed(4) + \". With prevalence \" + prior.toFixed(3) + \", the true-positive joint \" + tp.toFixed(5) + \" is compared against the false-positive joint \" + fp.toFixed(5) + \". \" + (posterior < 0.5 ? \"Because the disease is rare, false positives outnumber true positives, so a positive test is more likely to be a false alarm.\" : \"Because the disease is common enough, true positives dominate and the positive test is informative.\");\n  return {posterior: posterior, tp: tp, fp: fp, denom: denom, table: table, flow: flow, insight: insight};\n}",
   "outputs": [
     {
       "id": "posterior",
@@ -82,33 +77,21 @@
       "unit": ""
     },
     {
-      "id": "pPos",
+      "id": "tp",
       "type": "scalar",
-      "label": "P(+)",
+      "label": "Joint P(+|D)P(D)",
       "unit": ""
     },
     {
-      "id": "truePos",
+      "id": "fp",
       "type": "scalar",
-      "label": "True positives per 1000",
+      "label": "Joint P(+|\u00acD)(1-P(D))",
       "unit": ""
     },
     {
-      "id": "falsePos",
+      "id": "denom",
       "type": "scalar",
-      "label": "False positives per 1000",
-      "unit": ""
-    },
-    {
-      "id": "trueNeg",
-      "type": "scalar",
-      "label": "True negatives per 1000",
-      "unit": ""
-    },
-    {
-      "id": "falseNeg",
-      "type": "scalar",
-      "label": "False negatives per 1000",
+      "label": "Total P(+)",
       "unit": ""
     },
     {
@@ -117,116 +100,124 @@
       "label": "Intermediate quantities",
       "columns": [
         "Quantity",
+        "Symbol",
         "Value"
       ]
+    },
+    {
+      "id": "flow",
+      "type": "flow",
+      "label": "Counts out of 1000 people"
     }
   ],
   "steps": [
-    "Prior: P(D) = {{prior}}",
-    "Sensitivity: P(+|D) = {{sensitivity}}",
-    "False positive rate: P(+|\u00acD) = {{fpr}}",
-    "P(+) = P(+|D)P(D) + P(+|\u00acD)(1-P(D)) = {{pPos}}",
-    "Posterior: P(D|+) = \\frac{P(+|D)P(D)}{P(+)} = {{posterior}}"
+    "P(D) = {{prior}}, \\quad P(+ \\mid D) = {{sens}}, \\quad P(+ \\mid \\neg D) = {{fpr}}",
+    "P(+ \\mid D)\\,P(D) = {{tp}}",
+    "P(+ \\mid \\neg D)\\,(1 - P(D)) = {{fp}}",
+    "P(+) = {{tp}} + {{fp}} = {{denom}}",
+    "P(D \\mid +) = \\frac{{{tp}}}{{{denom}}} = {{posterior}}"
   ],
   "explorations": [
     {
       "title": "Rare disease, accurate test",
-      "predict": "If the disease is rare (1 in 1000) and the test is 99% sensitive and 5% false positive, what is the chance you have the disease after a positive test?",
+      "predict": "If only 1 in 1000 people have the disease and the test is 99% sensitive with a 5% false positive rate, what fraction of positive tests are true positives?",
       "set": {
         "prior": 0.001,
-        "sensitivity": 0.99,
+        "sens": 0.99,
         "fpr": 0.05
       },
-      "observe": "The posterior is about 1.9%. Even with a positive test, the disease is unlikely.",
-      "why": "Because the disease is rare, the number of false positives from the large healthy population outweighs the true positives from the small diseased population. The denominator P(+) is dominated by the false positive term.",
-      "expect": "approx(out.posterior, 0.99*0.001/(0.99*0.001+0.05*0.999), 1e-6)"
+      "observe": "The posterior is about 0.019. Out of 1000 people, roughly 1 true positive and 50 false positives appear, so most positives are false alarms.",
+      "why": "The numerator P(+|D)P(D) = 0.99 \u00d7 0.001 = 0.00099 is tiny compared with the denominator, which is dominated by the false-positive term P(+|\u00acD)(1-P(D)) = 0.05 \u00d7 0.999 \u2248 0.04995. The posterior is the ratio of the small numerator to the large denominator.",
+      "expect": "approx(out.posterior, 0.99*0.001/(0.99*0.001 + 0.05*0.999), 1e-6)"
     },
     {
       "title": "Common disease, same test",
-      "predict": "If the disease is common (10% prevalence) with the same test, what is the posterior now?",
+      "predict": "Now raise prevalence to 0.5 while keeping sensitivity 0.99 and false positive rate 0.05. Does the posterior exceed 0.9?",
       "set": {
-        "prior": 0.1,
-        "sensitivity": 0.99,
+        "prior": 0.5,
+        "sens": 0.99,
         "fpr": 0.05
       },
-      "observe": "The posterior jumps to about 68.8%.",
-      "why": "With higher prevalence, the true positive term P(+|D)P(D) becomes larger relative to the false positive term, so the posterior increases.",
-      "expect": "approx(out.posterior, 0.99*0.1/(0.99*0.1+0.05*0.9), 1e-6)"
+      "observe": "The posterior is about 0.952. With half the population diseased, true positives (0.495) vastly outnumber false positives (0.025).",
+      "why": "The numerator P(+|D)P(D) = 0.99 \u00d7 0.5 = 0.495 now dominates the denominator 0.495 + 0.05 \u00d7 0.5 = 0.52, so the posterior is close to 1.",
+      "expect": "out.posterior > 0.9"
     }
   ],
   "self_tests": [
     {
-      "name": "Posterior formula",
+      "name": "Posterior matches Bayes formula",
       "set": {
         "prior": 0.01,
-        "sensitivity": 0.99,
+        "sens": 0.99,
         "fpr": 0.05
       },
-      "expect": "approx(out.posterior, 0.99*0.01/(0.99*0.01+0.05*0.99), 1e-6)"
+      "expect": "approx(out.posterior, 0.99*0.01/(0.99*0.01 + 0.05*0.99), 1e-6)"
     },
     {
-      "name": "Counts sum to 1000",
+      "name": "Joints sum to total positive",
       "set": {
-        "prior": 0.01,
-        "sensitivity": 0.99,
-        "fpr": 0.05
+        "prior": 0.2,
+        "sens": 0.9,
+        "fpr": 0.1
       },
-      "expect": "approx(out.truePos + out.falsePos + out.trueNeg + out.falseNeg, 1000, 1e-6)"
+      "expect": "approx(out.tp + out.fp, out.denom, 1e-9)"
     },
     {
-      "name": "Posterior between 0 and 1",
+      "name": "Perfect test gives posterior 1",
       "set": {
-        "prior": 0.5,
-        "sensitivity": 0.5,
-        "fpr": 0.5
+        "prior": 0.3,
+        "sens": 1,
+        "fpr": 0
+      },
+      "expect": "approx(out.posterior, 1, 1e-9)"
+    },
+    {
+      "name": "Posterior is a probability",
+      "set": {
+        "prior": 0.05,
+        "sens": 0.8,
+        "fpr": 0.15
       },
       "expect": "out.posterior >= 0 && out.posterior <= 1"
     }
   ],
-  "limitation": "Assumes the test's sensitivity and false positive rate are known exactly and do not vary between individuals or populations. In reality, these can depend on disease severity, comorbidities, and test administration.",
-  "misconception": "Many people think a positive test on a 99% accurate test means a 99% chance of disease. Actually, the posterior depends heavily on prevalence.",
+  "limitation": "The model assumes the test result is a single binary outcome and that sensitivity and false positive rate are known exactly and independent of prevalence. In practice these rates are estimated with uncertainty, and prevalence can vary across subgroups, so the posterior is itself uncertain.",
+  "misconception": "A high test accuracy does not mean a positive result implies a high probability of disease. When the disease is rare, the false positive rate matters more than sensitivity because there are far more healthy people to generate false alarms.",
   "claims": [
     {
-      "text": "Bayes' theorem gives the posterior probability of disease given a positive test.",
-      "source": "paper"
-    },
-    {
-      "text": "The posterior is low when prevalence is low, even with high sensitivity and low false positive rate.",
+      "text": "The posterior probability of disease given a positive test equals sensitivity times prevalence divided by the total probability of a positive test.",
       "source": "ours"
     },
     {
-      "text": "The toy model assumes a fixed population of 1000 and exact probabilities.",
+      "text": "For a rare disease, even a highly sensitive test can yield a low posterior because false positives from the large healthy population dominate the positives.",
       "source": "ours"
     }
   ],
   "outcomes": [
     {
-      "outcome": "Calculate posterior probability using Bayes' theorem.",
+      "outcome": "Compute the posterior probability of disease given a positive test from prevalence, sensitivity and false positive rate.",
       "covered_by": [
         "control:prior",
-        "control:sensitivity",
+        "control:sens",
         "control:fpr",
         "output:posterior",
+        "steps:4"
+      ]
+    },
+    {
+      "outcome": "Interpret the posterior as a count of true positives among all positives out of 1000 people.",
+      "covered_by": [
+        "output:flow",
+        "output:table",
         "exploration:1"
       ]
     },
     {
-      "outcome": "Explain why a rare disease leads to a low posterior even with an accurate test.",
+      "outcome": "Explain why a rare disease produces a low posterior even with an accurate test.",
       "covered_by": [
-        "output:posterior",
-        "output:truePos",
-        "output:falsePos",
-        "exploration:1"
-      ]
-    },
-    {
-      "outcome": "Interpret the counts of true/false positives and negatives out of 1000 people.",
-      "covered_by": [
-        "output:truePos",
-        "output:falsePos",
-        "output:trueNeg",
-        "output:falseNeg",
-        "output:table"
+        "exploration:1",
+        "exploration:2",
+        "output:insight"
       ]
     }
   ]

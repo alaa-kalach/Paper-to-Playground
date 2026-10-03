@@ -2,12 +2,13 @@ You write a JSON spec for an interactive teaching page about ONE mechanism from 
 Input: source_url, focus (concept + required learning outcomes), audience.
 
 CONTENT
-- Explain only the concept in focus. Restate each learning outcome from focus in "outcomes" with what covers it ("control:id", "output:id", "exploration:1").
+- Explain only the concept in focus. Restate each learning outcome from focus in "outcomes"; covered_by may only contain "control:<id>", "output:<id>", "exploration:1" or "exploration:2".
 - Write for the audience. Short, clear sentences. Define every symbol. All math in LaTeX.
 - paper.section, equation, authors, year: only if named in focus or you are certain; else null. paper.url = source_url.
 - Never quote the paper. Tag symbols, equation and claims "paper" or "ours". Include at least one "ours" claim describing the toy setup and its simplifications.
 - limitation: specific to this mechanism and scientifically correct, not generic.
 - Exploration "why": explain the mechanism in 1-2 sentences using the equation, not just the result.
+- Each exploration's "set" must itself produce the effect it teaches (don't tell the learner to try something else instead).
 
 COMPUTE
 - "compute": "function compute(inputs){...}", plain deterministic JS, only Math. inputs: slider->number, toggle->boolean, select->string, vector->number[], matrix->number[][].
@@ -18,12 +19,18 @@ COMPUTE
 - Handle edge cases (all zeros, min/max, 0*log0=0). Never return NaN or Infinity; for invalid input set "warning".
 - "insight" must interpret: compare to a reference (max, threshold, other case) and give the cause.
 - Do not list "insight" or "warning" in "outputs".
+- Never hard-code facts about the specific example in text (which item is largest, who links to whom). Put them in "insight", computed by code from the current inputs.
+- Explanations must be consistent with each other and with the misconception.
+- "steps" must be pure LaTeX math (words only inside \text{}), and each step should show a live value with {{id}}.
+- If you use standard notation that differs from the paper's, tag it "ours" and say so in the caption.
+- If the mechanism has a structure (graph, network, pipeline), add a "flow" output that draws it from the current inputs.
 - At least 2 controls; every control must change some output. Prefer one vector/matrix control over many sliders. Vectors/matrices at most 4x4.
 - "steps": LaTeX lines; {{id}} is replaced live by a scalar output or a slider/toggle/select input.
 
 CHECKS
 - Exactly 2 explorations and 2-4 self_tests. "set" names only control ids with valid values. "expect" is a JS boolean over out (outputs), inp (inputs), base (outputs at defaults), with helpers approx(a,b,tol), sum(arr), max(arr), min(arr), all(arr,fn).
 - Only assert facts that are exactly true: invariants (rows sum to 1, output = weighted sum) or known values, using approx. Softmax never gives exactly 0 or 1.
+- self_tests must check invariants or formula values (sums, bounds, limits, known cases). Never predict which item ranks highest in your example.
 - Never compare against rounded constants (0.632, 0.993). Write the exact expression, e.g. approx(out.V, inp.V0*(1-Math.exp(-1)), 1e-6).
 - Iterative processes only approach their limit in finite steps: test with a realistic tolerance or compare to the exact value your formula gives after those steps.
 - For threshold expectations (e.g. weight > 0.9), pick extreme "set" values so the effect is clear: work out the number first; for softmax, make the score gap at least 5.
