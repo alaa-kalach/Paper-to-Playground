@@ -450,8 +450,13 @@ def _explain(expr, out, inp, base):
             while isinstance(x, list) and x:
                 depth += 1; x = x[0]
             for m in re.finditer(r"\b" + re.escape(name) + r"((?:\[[^\]]*\])*)", expr):
-                if depth > m.group(1).count("["):
-                    arrays = True  # compared while still an array
+                after = expr[m.end():].lstrip()
+                before = expr[:m.start()].rstrip()
+                if before.endswith((".", "out.", "base.", "inp.")):
+                    before = re.sub(r"(out|base|inp)\.$", "", before).rstrip()
+                direct = after[:1] in ("<", ">") or before[-1:] in ("<", ">")
+                if depth > m.group(1).count("[") and direct and not after.startswith((".", "(")):
+                    arrays = True  # an array used directly with < or > (string comparison)
             parts.append(f"{src}.{name}={json.dumps(_round(v))[:140]}")
     msg = "; ".join(parts[:5]) or "(no referenced values found)"
     if arrays and re.search(r"[<>]", expr):
@@ -615,7 +620,13 @@ class CheckRun:
         if err:
             return False, f"{label}: expect '{expr}' error: {err}"
         if not ok:
-            return False, f"{label}: assert '{expr}' is false; actual values: {_explain(expr, out, inp, self.base)}"
+            hint = ""
+            if re.search(r"\bbase\b", expr):
+                hint += f" (out = state after set {json.dumps(setobj)[:100]}; base = state at the defaults: check the direction of the comparison)"
+            if re.search(r"[<>]\s*-?\d|approx\(", expr):
+                hint += (" If the effect is real but weaker than asserted, make 'set' more extreme or relax the threshold/"
+                         "tolerance to what the computed values can reach.")
+            return False, f"{label}: assert '{expr}' is false; actual values: {_explain(expr, out, inp, self.base)}.{hint}"
         return True, None
 
     # -- check 6: self-tests
