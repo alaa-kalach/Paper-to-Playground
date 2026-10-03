@@ -5,3 +5,5 @@ out*/
 .env
 runs/
 out*/
+.DS_Store
+preview/
