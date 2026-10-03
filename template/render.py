@@ -26,7 +26,7 @@ TEMPLATE = Path(__file__).with_name("page.html")
 
 # {{name}}, {{name[0]}}, {{name[0][1]}}, optional :digits  e.g. {{H:2}}
 PH_RE = re.compile(r"\{\{\s*([A-Za-z_]\w*(?:\[\d+\])*(?::\d)?)\s*\}\}")
-INLINE_MATH_RE = re.compile(r"(?<!\\)\$(.+?)(?<!\\)\$", re.S)
+INLINE_MATH_RE = re.compile(r"\\\((.+?)\\\)|(?<!\\)\$(.+?)(?<!\\)\$", re.S)
 BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 ITAL_RE = re.compile(r"(?<![\w*])\*(?!\s)([^*]+?)(?<!\s)\*(?![\w*])")
 MTEXT_PH_RE = re.compile(r"<mtext>ZZPH(\d+)ZZ</mtext>")
@@ -94,7 +94,7 @@ def text_html(s, warnings: list[str], where: str = "") -> str:
     parts, last = [], 0
     for m in INLINE_MATH_RE.finditer(s):
         parts.append(_esc_text(s[last:m.start()]))
-        parts.append(latex_to_mathml(m.group(1), warnings, where=where))
+        parts.append(latex_to_mathml(m.group(1) or m.group(2), warnings, where=where))
         last = m.end()
     parts.append(_esc_text(s[last:]))
     return "".join(parts)
@@ -102,7 +102,9 @@ def text_html(s, warnings: list[str], where: str = "") -> str:
 
 def _esc_text(t: str) -> str:
     t = html.escape(t.replace("\\$", "$"))
-    return ITAL_RE.sub(r"<i>\1</i>", BOLD_RE.sub(r"<b>\1</b>", t))
+    t = ITAL_RE.sub(r"<i>\1</i>", BOLD_RE.sub(r"<b>\1</b>", t))
+    # live placeholders in plain text too
+    return PH_RE.sub(lambda m: f'<b class="live" data-ph="{html.escape(m.group(1), quote=True)}">…</b>', t)
 
 
 # ------------------------------------------------------------- normalisation
@@ -181,6 +183,56 @@ def canonicalize(spec: dict) -> dict:
     return s
 
 
+def _looks_like_prose(tex: str) -> bool:
+    """Model mixed sentences with \\( \\) / $ $ math -> render as text with inline math."""
+    return "\\(" in tex or bool(re.search(r"(?<!\\)\$", tex))
+
+
+_WORD_RUN = re.compile(r"(?<![\\A-Za-z])([A-Za-z]{2,}(?:[ ,]+[A-Za-z]{2,})*)")
+
+
+def _wrap_words(tex: str) -> str:
+    """Wrap bare English words (outside braces) in \\text{} so they don't render as italic letter soup.
+    Only runs containing a word of 4+ letters; skips placeholders and LaTeX commands."""
+    out, buf, depth, i = [], [], 0, 0
+
+    def flush():
+        chunk = "".join(buf)
+        buf.clear()
+        out.append(_WORD_RUN.sub(lambda m: "\\;\\text{" + m.group(1) + "}\\;" if re.search(r"[A-Za-z]{4,}", m.group(1)) else m.group(1), chunk))
+
+    while i < len(tex):
+        if tex.startswith("{{", i):
+            j = tex.find("}}", i)
+            if j > 0:
+                flush(); out.append(tex[i:j + 2]); i = j + 2; continue
+        ch = tex[i]
+        if ch == "\\":  # command or escaped char: copy name verbatim
+            m = re.match(r"\\([A-Za-z]+|.)", tex[i:])
+            flush(); out.append(m.group(0)); i += len(m.group(0)); continue
+        if ch == "{":
+            if depth == 0: flush()
+            depth += 1; out.append(ch); i += 1; continue
+        if ch == "}":
+            depth = max(0, depth - 1); out.append(ch); i += 1; continue
+        (buf if depth == 0 else out).append(ch); i += 1
+    flush()
+    return "".join(out)
+
+
+def _unknown_placeholders(spec: dict) -> list[str]:
+    """Placeholder ids that are neither a control id nor a key in compute's return statement(s)."""
+    ids = {c.get("id") for c in spec.get("controls") or [] if isinstance(c, dict)}
+    ids |= {o.get("id") for o in spec.get("outputs") or [] if isinstance(o, dict)}
+    src = str(spec.get("compute") or "")
+    ids |= set(re.findall(r"([A-Za-z_]\w*)\s*:", src)) | set(re.findall(r"[{,]\s*([A-Za-z_]\w*)\s*(?=[,}])", src))
+    used = set()
+    for st in spec.get("steps") or []:
+        txt = st if isinstance(st, str) else (st.get("latex") or st.get("text") or "") if isinstance(st, dict) else ""
+        used |= {m.group(1).split("[")[0].split(":")[0] for m in PH_RE.finditer(str(txt))}
+    return sorted(u for u in used if u not in ids)
+
+
 def build_view(spec: dict) -> tuple[dict, list[str]]:
     """Normalise a (possibly imperfect) spec into what page.html expects.
     Never raises on bad content: drops/hides broken parts and records warnings."""
@@ -253,12 +305,18 @@ def build_view(spec: dict) -> tuple[dict, list[str]]:
         if isinstance(st, str):
             st = {"latex": st}
         if isinstance(st, dict) and (st.get("latex") or st.get("text")):
-            item = {"html": latex_to_mathml(st["latex"], w, where=f"steps[{i}]") if st.get("latex")
-                    else text_html(st.get("text"), w, f"steps[{i}]")}
+            lx = st.get("latex")
+            if lx and _looks_like_prose(lx):  # model mixed words and \( math \) -> render as text + inline math
+                item = {"html": text_html(lx, w, f"steps[{i}]")}
+            else:
+                item = {"html": latex_to_mathml(_wrap_words(lx), w, where=f"steps[{i}]") if lx
+                        else text_html(st.get("text"), w, f"steps[{i}]")}
             if st.get("note"):
                 item["note_html"] = text_html(st["note"], w, f"steps[{i}].note")
             view["steps"].append(item)
 
+    for u in _unknown_placeholders(spec):
+        w.append(f"steps use {{{{{u}}}}} but no control/output named '{u}' exists; it will show as a dash")
     view["explorations"] = []
     for i, ex in enumerate(_as_list(spec.get("explorations"))):
         if not isinstance(ex, dict):
@@ -289,9 +347,9 @@ def _safe_json(obj) -> str:
              .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
 
 
-def _fill(template: str, title: str, spec_json: str) -> str:
-    vals = {"__TITLE__": html.escape(title), "__SPEC_JSON__": spec_json}
-    return re.sub(r"__TITLE__|__SPEC_JSON__", lambda m: vals[m.group(0)], template, count=2)
+def _fill(template: str, title: str, spec_json: str, eq_html: str = "") -> str:
+    vals = {"__TITLE__": html.escape(title), "__SPEC_JSON__": spec_json, "__EQUATION_HTML__": eq_html}
+    return re.sub(r"__TITLE__|__SPEC_JSON__|__EQUATION_HTML__", lambda m: vals[m.group(0)], template, count=3)
 
 
 def render_html(spec: dict) -> tuple[str, list[str]]:
@@ -302,7 +360,8 @@ def render_html(spec: dict) -> tuple[str, list[str]]:
         warnings.append(f"spec contained non-JSON numbers: {e}")
         payload = _safe_json(json.loads(json.dumps(view, default=str).replace("NaN", "null")
                                         .replace("-Infinity", "null").replace("Infinity", "null")))
-    return _fill(TEMPLATE.read_text(encoding="utf-8"), view["title"], payload), warnings
+    eq_html = (view.get("equation") or {}).get("html", "")  # static copy: visible before JS runs
+    return _fill(TEMPLATE.read_text(encoding="utf-8"), view["title"], payload, eq_html), warnings
 
 
 render_report: dict = {}

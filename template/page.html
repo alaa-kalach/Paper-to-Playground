@@ -105,7 +105,7 @@ table.data td{font-family:var(--mono)}
 .steps li:last-child{border-bottom:0}
 .steps li math{font-size:1.18em}
 .steps .note{color:var(--muted);font-size:.88rem}
-mn.live{color:var(--accent);font-weight:700}
+mn.live,b.live{color:var(--accent);font-weight:700}
 .explore{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
 .ex{border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .ex .lbl{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
@@ -141,7 +141,7 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;margin-top:24px}
 
   <section class="card" id="sec-symbols"><h2><span class="num">1</span>Symbols you need</h2><table class="sym" id="symbols"></table></section>
 
-  <section class="card" id="sec-eq"><h2><span class="num">2</span>The key equation <span id="eq-badge"></span></h2><div class="eq" id="equation"></div><p class="meta" id="eq-note"></p></section>
+  <section class="card" id="sec-eq"><h2><span class="num">2</span>The key equation <span id="eq-badge"></span></h2><div class="eq" id="equation">__EQUATION_HTML__</div><p class="meta" id="eq-note"></p></section>
 
   <section class="card" id="sec-pg"><h2><span class="num">3</span>Playground</h2>
     <p class="meta">Change the inputs on the left. Every number and picture on the right is recalculated in your browser.</p>
@@ -170,7 +170,7 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;margin-top:24px}
     <ul class="claims" id="claims"></ul>
     <div id="tests-wrap"><h3 style="margin-top:14px">Sanity checks (run live in this page)</h3><ul class="tests" id="tests"></ul></div>
   </section>
-  <footer>Generated automatically from a short excerpt-based brief. Works offline; no data leaves this page.</footer>
+  <footer>Generated automatically from a short learning brief. Works offline; no data leaves this page.</footer>
 </main>
 
 <script type="application/json" id="spec">__SPEC_JSON__</script>
@@ -200,7 +200,7 @@ function s(tag, attrs, text){
 function clone(o){ return o === undefined ? undefined : JSON.parse(JSON.stringify(o)); }
 function isNum(v){ return typeof v === "number" && isFinite(v); }
 function fmt(v, d){
-  if (typeof v === "boolean") return v ? "on" : "off";
+  if (typeof v === "boolean") return v ? "yes" : "no";
   if (typeof v === "string") return v;
   if (Array.isArray(v)) return "[" + v.map(function(x){return fmt(x,d);}).join(", ") + "]";
   if (typeof v !== "number") return "—";
@@ -233,7 +233,7 @@ if (S.equation && S.equation.html){
   $("equation").innerHTML = S.equation.html;
   $("eq-badge").appendChild(badge(S.equation.source));
   var notes = [];
-  if (S.equation.source === "paper"){ notes.push("As written in the paper" + (P.equation ? " (" + P.equation + ")" : "") + (P.section ? ", " + P.section : "") + "."); }
+  if (S.equation.source === "paper"){ notes.push("From the paper" + ((P.section || P.equation) ? " (" + [P.section, P.equation].filter(Boolean).join(", ") + ")" : "") + "."); }
   else notes.push("Our own formulation of the idea, not a verbatim equation from the paper.");
   $("eq-note").innerHTML = "";
   $("eq-note").appendChild(document.createTextNode(notes.join(" ")));
