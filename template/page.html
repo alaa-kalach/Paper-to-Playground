@@ -63,6 +63,8 @@ input[type=number]{width:100%;min-width:0;font:inherit;font-family:var(--mono);f
 input[type=number]:focus,select:focus,button:focus-visible,input[type=range]:focus-visible,.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 select{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 .vrow{display:grid;grid-template-columns:auto 1fr 76px;gap:8px;align-items:center;margin:2px 0}
+.vrow.off{opacity:.38}
+.vrow.off input{cursor:not-allowed}
 .vrow .lab{font-family:var(--mono);font-size:.82rem;color:var(--muted);min-width:2.2em}
 .mgrid{display:grid;gap:4px;align-items:center}
 .mgrid .lab{font-family:var(--mono);font-size:.78rem;color:var(--muted);text-align:center}
@@ -359,17 +361,25 @@ function buildControl(c){
     w.refresh = function(){
       body.innerHTML = "";
       var arr = state[c.id] || [];
+      var src = activeSrc(c), act = src ? Math.round(+state[src]) : arr.length;
+      if (!isFinite(act)) act = arr.length;
       var useSliders = c.widget !== "numbers" && isNum(c.min) && isNum(c.max) && arr.length <= 12;
       if (useSliders){
         arr.forEach(function(v, i){
           var r = h("input",{type:"range", min:c.min, max:c.max, step:isNum(c.step)?c.step:"any", value:v, "aria-label":(c.label||c.id) + " " + labelFor(c,i,"labels")});
           var n = numInput(c, v, function(nv, commit){ state[c.id][i] = nv; r.value = nv; changed(c.id); }, (c.label||c.id) + " " + labelFor(c,i,"labels") + " value");
           r.addEventListener("input", function(){ state[c.id][i] = +r.value; n.value = r.value; changed(c.id); });
-          body.appendChild(h("div",{"class":"vrow"}, h("span",{"class":"lab",text:labelFor(c,i,"labels")}), r, n));
+          var off = i >= act;
+          if (off){ r.disabled = true; n.disabled = true; }
+          body.appendChild(h("div",{"class":"vrow" + (off ? " off" : ""), title: off ? "Not used while " + src + " = " + act : null}, h("span",{"class":"lab",text:labelFor(c,i,"labels")}), r, n));
         });
+        if (act < arr.length){
+          var srcCtl = CTL.filter(function(z){ return z.id === src; })[0];
+          body.appendChild(h("div",{"class":"help", text:"Greyed rows are not used: only the first " + act + " count while “" + ((srcCtl && srcCtl.label) || src) + "” = " + act + "."}));
+        }
       } else {
         var g = h("div",{"class":"mgrid", style:"grid-template-columns:repeat(" + Math.min(arr.length,6) + ",1fr)"});
-        arr.forEach(function(v, i){ g.appendChild(numInput(c, v, function(nv){ state[c.id][i] = nv; changed(c.id); }, (c.label||c.id) + " " + labelFor(c,i,"labels"))); });
+        arr.forEach(function(v, i){ var ni = numInput(c, v, function(nv){ state[c.id][i] = nv; changed(c.id); }, (c.label||c.id) + " " + labelFor(c,i,"labels")); if (i >= act){ ni.disabled = true; ni.style.opacity = .38; } g.appendChild(ni); });
         body.appendChild(g);
       }
     };
@@ -395,7 +405,22 @@ function buildControl(c){
   widgets[c.id] = w;
   return box;
 }
-function dependents(id){ return CTL.filter(function(c){ return c.length_from === id || c.rows_from === id || c.cols_from === id; }); }
+/* A fixed-length vector can be "driven" by a count slider (e.g. n outcomes): rows beyond n are greyed out.
+   Explicit: "active_from": "<slider id>". Otherwise inferred: one integer slider whose max equals the vector length
+   and whose id/label looks like a count (n, k, number of..., outcomes, size...). */
+var ACT_ID = /^(n|k|m|N|K|M|num\w*|n_\w+|count\w*|size)$/, ACT_LABEL = /number|count|how many|outcomes|size|length|# ?of/i;
+function activeSrc(c){
+  if (c.type !== "vector") return null;
+  if (c.active_from) return c.active_from;
+  if (c.length_from) return null;
+  var L = isNum(c.length) ? c.length : (Array.isArray(c["default"]) ? c["default"].length : 0);
+  var cand = CTL.filter(function(s){
+    return s !== c && s.type === "slider" && s.max === L && isNum(s.min) && s.min >= 0 &&
+      (s.step === undefined || s.step === 1) && (ACT_ID.test(String(s.id)) || ACT_LABEL.test(String(s.label || "")));
+  });
+  return cand.length === 1 ? cand[0].id : null;
+}
+function dependents(id){ return CTL.filter(function(c){ return c.length_from === id || c.rows_from === id || c.cols_from === id || activeSrc(c) === id; }); }
 function setVal(id, v){
   state[id] = v;
   var deps = dependents(id);
