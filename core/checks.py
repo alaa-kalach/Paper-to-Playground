@@ -459,6 +459,12 @@ def _explain(expr, out, inp, base):
                     arrays = True  # an array used directly with < or > (string comparison)
             parts.append(f"{src}.{name}={json.dumps(_round(v))[:140]}")
     msg = "; ".join(parts[:5]) or "(no referenced values found)"
+    # Also show the inputs this case actually ran with (set values + defaults for the rest).
+    # Without them a repair cannot tell e.g. that scaling was still on, or which row of Q drives out.A[0].
+    shown = {name for src, name in seen if src == "inp"}
+    used = {k: _round(v) for k, v in (inp or {}).items() if k not in shown}
+    if used:
+        msg += f"; inputs used: {json.dumps(used, separators=(',', ':'))[:400]}"
     if arrays and re.search(r"[<>]", expr):
         msg += ". NOTE: '<'/'>' on arrays compares them as strings; index down to numbers, e.g. out.W[0][0] < base.W[0][0]"
     return msg

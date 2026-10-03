@@ -771,7 +771,7 @@ function drawTable(v, o){
   (v.columns || []).forEach(function(c){ tr.appendChild(h("th",{html:mathText(c)})); });
   t.appendChild(h("thead",null,tr));
   var tb = h("tbody");
-  (v.rows || []).forEach(function(r){ var row = h("tr"); (r || []).forEach(function(c){ row.appendChild(typeof c === "number" ? h("td",{text: fmt(c, isNum(o.digits) ? o.digits : 3)}) : h("td",{html: mathText(c)})); }); tb.appendChild(row); });
+  (v.rows || []).forEach(function(r){ var row = h("tr"); (r || []).forEach(function(c){ row.appendChild((typeof c === "number" || typeof c === "boolean" || Array.isArray(c)) ? h("td",{text: fmt(c, isNum(o.digits) ? o.digits : 3)}) : h("td",{html: mathText(c)})); }); tb.appendChild(row); });
   t.appendChild(tb);
   return h("div",{"class":"tblwrap"}, t);
 }
