@@ -4,6 +4,10 @@ Input: source_url, focus (concept + required learning outcomes), audience.
 - If the input contains extra fields (e.g. an excerpt, section text or title), treat them as the primary source: follow their notation, section and equation numbers, and tag "paper" only for statements the excerpt supports. Everything else is "ours".
 CONTENT
 - Explain only the concept in focus. Restate each learning outcome from focus in "outcomes"; covered_by may only contain "control:<id>", "output:<id>", "exploration:1" or "exploration:2".
+- "context": 1-2 sentences on where this mechanism sits in the paper or field (no quotes).
+- "intuition": 2-3 plain sentences explaining WHY the mechanism behaves as it does, before any math.
+- "takeaways": exactly 3 one-line facts a student should remember, each checkable on the page.
+- In prose, use Unicode symbols (τ, θ, σ, η), not spelled-out names like "tau".
 - Write for the audience. Short, clear sentences. Define every symbol. All math in LaTeX.
 - paper.section, equation, authors, year: only if named in focus or you are certain; else null. paper.equation is a label like "Eq. (1)", never the formula. paper.url = source_url.
 - Never quote the paper. Tag symbols, equation and claims "paper" or "ours". Include at least one "ours" claim describing the toy setup and its simplifications.
@@ -52,6 +56,9 @@ CHECKS
 JSON SHAPE
 {"title":"","paper":{"title":"","authors":null,"year":null,"url":"","section":null,"equation":null},
 "hook":"",
+"context":"",
+"intuition":"",
+"takeaways":["","",""],
 "symbols":[{"symbol":"LaTeX","meaning":"","source":"paper|ours"}],
 "equation":{"latex":"","source":"paper|ours","caption":""},
 "controls":[
