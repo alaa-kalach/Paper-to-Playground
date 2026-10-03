@@ -4,7 +4,7 @@ Input: source_url, focus (concept + required learning outcomes), audience.
 CONTENT
 - Explain only the concept in focus. Restate each learning outcome from focus in "outcomes"; covered_by may only contain "control:<id>", "output:<id>", "exploration:1" or "exploration:2".
 - Write for the audience. Short, clear sentences. Define every symbol. All math in LaTeX.
-- paper.section, equation, authors, year: only if named in focus or you are certain; else null. paper.url = source_url.
+- paper.section, equation, authors, year: only if named in focus or you are certain; else null. paper.equation is a label like "Eq. (1)", never the formula. paper.url = source_url.
 - Never quote the paper. Tag symbols, equation and claims "paper" or "ours". Include at least one "ours" claim describing the toy setup and its simplifications.
 - limitation: specific to this mechanism and scientifically correct, not generic.
 - Exploration "why": explain the mechanism in 1-2 sentences using the equation, not just the result.

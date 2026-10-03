@@ -1,0 +1,206 @@
+{
+  "title": "Michaelis-Menten Kinetics: Rate Saturation and Km",
+  "paper": {
+    "title": "The kinetics of the inversion effect of invertase",
+    "authors": null,
+    "year": null,
+    "url": "https://doi.org/10.1021/bi201284u",
+    "section": null,
+    "equation": null
+  },
+  "hook": "How fast can an enzyme work? Explore how reaction rate depends on substrate concentration and discover the meaning of Km.",
+  "symbols": [
+    {
+      "symbol": "v",
+      "meaning": "Reaction rate (velocity)",
+      "source": "paper"
+    },
+    {
+      "symbol": "V_{\\max}",
+      "meaning": "Maximum reaction rate at saturating substrate",
+      "source": "paper"
+    },
+    {
+      "symbol": "K_m",
+      "meaning": "Michaelis constant: substrate concentration at half Vmax",
+      "source": "paper"
+    },
+    {
+      "symbol": "[S]",
+      "meaning": "Substrate concentration",
+      "source": "paper"
+    }
+  ],
+  "equation": {
+    "latex": "v = \\frac{V_{\\max} [S]}{K_m + [S]}",
+    "source": "paper",
+    "caption": "Michaelis-Menten equation: rate v as a function of substrate concentration [S]."
+  },
+  "controls": [
+    {
+      "id": "Vmax",
+      "type": "slider",
+      "label": "Vmax (max rate)",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "default": 5,
+      "symbol": "V_{\\max}"
+    },
+    {
+      "id": "Km",
+      "type": "slider",
+      "label": "Km (half-saturation constant)",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "default": 2,
+      "symbol": "K_m"
+    },
+    {
+      "id": "S",
+      "type": "slider",
+      "label": "Substrate concentration [S]",
+      "min": 0,
+      "max": 20,
+      "step": 0.1,
+      "default": 2,
+      "symbol": "[S]"
+    }
+  ],
+  "compute": "function compute(inputs) {\n  const Vmax = inputs.Vmax;\n  const Km = inputs.Km;\n  const S = inputs.S;\n  const v = (Vmax * S) / (Km + S);\n  const v_at_Km = Vmax / 2;\n  const S_values = [];\n  const v_values = [];\n  for (let i = 0; i <= 100; i++) {\n    const s = (i / 100) * 20;\n    S_values.push(s);\n    v_values.push((Vmax * s) / (Km + s));\n  }\n  const curve = { x: S_values, lines: [{ name: 'v', y: v_values }], marker: { x: S, y: v } };\n  const table = {\n    columns: ['Quantity', 'Value'],\n    rows: [\n      ['Vmax', Vmax.toFixed(2)],\n      ['Km', Km.toFixed(2)],\n      ['[S]', S.toFixed(2)],\n      ['v', v.toFixed(4)],\n      ['Vmax/2', v_at_Km.toFixed(4)],\n      ['v at [S]=Km', v_at_Km.toFixed(4)]\n    ]\n  };\n  let insight = '';\n  if (S === 0) {\n    insight = 'At [S]=0, the rate is 0. As [S] increases, v increases.';\n  } else if (Math.abs(S - Km) < 0.01) {\n    insight = 'At [S]=Km, the rate is exactly half of Vmax: v = Vmax/2 = ' + v_at_Km.toFixed(2) + '.';\n  } else if (S > 10 * Km) {\n    insight = 'At high [S] (>> Km), the rate approaches Vmax = ' + Vmax.toFixed(2) + '. Currently v = ' + v.toFixed(2) + ', which is ' + ((v / Vmax) * 100).toFixed(1) + '% of Vmax.';\n  } else {\n    insight = 'The rate is ' + v.toFixed(2) + '. At [S]=Km, the rate would be ' + v_at_Km.toFixed(2) + ' (half of Vmax).';\n  }\n  return {\n    v: v,\n    v_at_Km: v_at_Km,\n    curve: curve,\n    table: table,\n    insight: insight\n  };\n}",
+  "outputs": [
+    {
+      "id": "v",
+      "type": "scalar",
+      "label": "Reaction rate v",
+      "unit": "M/s"
+    },
+    {
+      "id": "v_at_Km",
+      "type": "scalar",
+      "label": "Rate at [S]=Km (Vmax/2)",
+      "unit": "M/s"
+    },
+    {
+      "id": "curve",
+      "type": "series",
+      "label": "Rate vs substrate concentration",
+      "x_label": "[S] (M)",
+      "y_label": "v (M/s)"
+    },
+    {
+      "id": "table",
+      "type": "table",
+      "label": "Current values"
+    }
+  ],
+  "steps": [
+    "v = \\frac{V_{\\max} [S]}{K_m + [S]}",
+    "At [S] = K_m: v = \\frac{V_{\\max} K_m}{K_m + K_m} = \\frac{V_{\\max}}{2}",
+    "Current: v = \\frac{ {{Vmax}} \\times {{S}} }{ {{Km}} + {{S}} } = {{v}}",
+    "At [S] = K_m = {{Km}}: v = {{v_at_Km}}"
+  ],
+  "explorations": [
+    {
+      "title": "Half Vmax at [S]=Km",
+      "predict": "Set [S] equal to Km. What is the rate compared to Vmax?",
+      "set": {
+        "S": 2,
+        "Km": 2,
+        "Vmax": 5
+      },
+      "observe": "The rate v is exactly half of Vmax.",
+      "why": "When [S]=Km, the denominator becomes 2Km, so v = Vmax*Km/(2Km) = Vmax/2.",
+      "expect": "approx(out.v, out.v_at_Km, 1e-6)"
+    },
+    {
+      "title": "Saturation at high [S]",
+      "predict": "Increase [S] to a very high value (e.g., 20) while keeping Km small (e.g., 0.1). What happens to the rate?",
+      "set": {
+        "S": 20,
+        "Km": 0.1,
+        "Vmax": 5
+      },
+      "observe": "The rate approaches Vmax but does not exceed it.",
+      "why": "As [S] >> Km, the term Km in the denominator becomes negligible, so v \u2248 Vmax*[S]/[S] = Vmax.",
+      "expect": "out.v > 0.99 * inp.Vmax"
+    }
+  ],
+  "self_tests": [
+    {
+      "name": "At [S]=Km, v=Vmax/2",
+      "set": {
+        "S": 2,
+        "Km": 2,
+        "Vmax": 5
+      },
+      "expect": "approx(out.v, out.v_at_Km, 1e-6)"
+    },
+    {
+      "name": "At [S]=0, v=0",
+      "set": {
+        "S": 0,
+        "Km": 2,
+        "Vmax": 5
+      },
+      "expect": "approx(out.v, 0, 1e-6)"
+    },
+    {
+      "name": "At high [S], v approaches Vmax",
+      "set": {
+        "S": 100,
+        "Km": 0.1,
+        "Vmax": 5
+      },
+      "expect": "out.v > 0.99 * inp.Vmax"
+    }
+  ],
+  "limitation": "This model assumes a single substrate, irreversible product formation, and steady-state conditions. It does not account for cooperativity, inhibition, or multiple substrates.",
+  "misconception": "The rate does not increase indefinitely with substrate concentration; it saturates at Vmax.",
+  "claims": [
+    {
+      "text": "The Michaelis-Menten equation describes the rate of enzymatic reactions.",
+      "source": "paper"
+    },
+    {
+      "text": "At [S]=Km, the reaction rate is half of Vmax.",
+      "source": "paper"
+    },
+    {
+      "text": "The rate approaches Vmax as [S] becomes very large.",
+      "source": "paper"
+    },
+    {
+      "text": "The interactive curve and table are generated from the equation with user-controlled parameters.",
+      "source": "ours"
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome": "Explain the meaning of Km and its relation to Vmax.",
+      "covered_by": [
+        "control:Km",
+        "output:v_at_Km",
+        "exploration:1"
+      ]
+    },
+    {
+      "outcome": "Calculate the reaction rate for given Vmax, Km, and [S].",
+      "covered_by": [
+        "control:Vmax",
+        "control:Km",
+        "control:S",
+        "output:v",
+        "output:table"
+      ]
+    },
+    {
+      "outcome": "Describe how the rate changes with substrate concentration and why it saturates.",
+      "covered_by": [
+        "output:curve",
+        "exploration:2"
+      ]
+    }
+  ]
+}

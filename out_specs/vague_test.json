@@ -1,0 +1,319 @@
+{
+  "title": "Dropout: Randomly Dropping Units and Rescaling",
+  "paper": {
+    "title": "Improving neural networks by preventing co-adaptation of feature detectors",
+    "authors": "Hinton et al.",
+    "year": 2012,
+    "url": "https://arxiv.org/abs/1207.0580",
+    "section": null,
+    "equation": null
+  },
+  "hook": "During training, dropout randomly removes units from a layer. But at test time, all units are present. How do we keep the expected output the same?",
+  "symbols": [
+    {
+      "symbol": "\\mathbf{h}",
+      "meaning": "Vector of activations from the previous layer.",
+      "source": "paper"
+    },
+    {
+      "symbol": "\\mathbf{W}",
+      "meaning": "Weight matrix connecting previous layer to current layer.",
+      "source": "paper"
+    },
+    {
+      "symbol": "\\mathbf{b}",
+      "meaning": "Bias vector of the current layer.",
+      "source": "paper"
+    },
+    {
+      "symbol": "\\mathbf{m}",
+      "meaning": "Binary mask vector: 1 means keep the unit, 0 means drop it.",
+      "source": "paper"
+    },
+    {
+      "symbol": "\\mathbf{y}",
+      "meaning": "Output of the layer after applying dropout and rescaling.",
+      "source": "paper"
+    },
+    {
+      "symbol": "p",
+      "meaning": "Probability of keeping a unit (1 - dropout rate).",
+      "source": "paper"
+    },
+    {
+      "symbol": "\\odot",
+      "meaning": "Element-wise multiplication.",
+      "source": "ours"
+    }
+  ],
+  "equation": {
+    "latex": "\\mathbf{y} = \\frac{1}{p} \\left( (\\mathbf{W}\\mathbf{h} + \\mathbf{b}) \\odot \\mathbf{m} \\right), \\quad m_i \\sim \\text{Bernoulli}(p)",
+    "source": "paper",
+    "caption": "Dropout applied to a layer's pre-activation, followed by rescaling by 1/p."
+  },
+  "controls": [
+    {
+      "id": "p",
+      "type": "slider",
+      "label": "Keep probability (p)",
+      "min": 0.1,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.8,
+      "symbol": "p"
+    },
+    {
+      "id": "mask",
+      "type": "vector",
+      "label": "Dropout mask (1=keep, 0=drop)",
+      "length": 4,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "default": [
+        1,
+        0,
+        1,
+        1
+      ],
+      "labels": [
+        "Unit 1",
+        "Unit 2",
+        "Unit 3",
+        "Unit 4"
+      ]
+    },
+    {
+      "id": "z",
+      "type": "vector",
+      "label": "Pre-activation values (z = Wh + b)",
+      "length": 4,
+      "min": -2,
+      "max": 2,
+      "step": 0.1,
+      "default": [
+        1.0,
+        -0.5,
+        0.5,
+        2.0
+      ],
+      "labels": [
+        "z1",
+        "z2",
+        "z3",
+        "z4"
+      ]
+    }
+  ],
+  "compute": "function compute(inputs) {\n  const p = Math.min(1, Math.max(0.1, inputs.p));\n  const mask = inputs.mask.map(v => v >= 0.5 ? 1 : 0);\n  const z = inputs.z;\n  const n = z.length;\n  const y = z.map((zi, i) => (zi * mask[i]) / p);\n  const y_no_rescale = z.map((zi, i) => zi * mask[i]);\n  const expected_y = z.map(zi => zi); // E[y] = z when mask ~ Bernoulli(p) and rescale by 1/p\n  const table = {\n    columns: [\"Unit\", \"z_i\", \"m_i\", \"z_i * m_i\", \"y_i = (z_i * m_i)/p\"],\n    rows: z.map((zi, i) => [i+1, zi.toFixed(2), mask[i], (zi*mask[i]).toFixed(2), y[i].toFixed(2)])\n  };\n  const flow = {\n    nodes: [\n      { id: \"input\", label: \"Input h\", value: \"\" },\n      { id: \"linear\", label: \"Linear z = Wh+b\", value: z.map(v=>v.toFixed(2)).join(\", \") },\n      { id: \"mask\", label: \"Mask m\", value: mask.join(\", \") },\n      { id: \"drop\", label: \"Dropout z\u2299m\", value: z.map((v,i)=>(v*mask[i]).toFixed(2)).join(\", \") },\n      { id: \"rescale\", label: \"Rescale /p\", value: y.map(v=>v.toFixed(2)).join(\", \") }\n    ],\n    edges: [\n      { from: \"input\", to: \"linear\", label: \"W,b\", value: \"\" },\n      { from: \"linear\", to: \"drop\", label: \"\", value: \"\" },\n      { from: \"mask\", to: \"drop\", label: \"\", value: \"\" },\n      { from: \"drop\", to: \"rescale\", label: \"1/p\", value: (1/p).toFixed(2) }\n    ]\n  };\n  const sum_y = y.reduce((a,b)=>a+b,0);\n  const sum_z = z.reduce((a,b)=>a+b,0);\n  const insight = `With p=${p.toFixed(2)}, the rescale factor is ${(1/p).toFixed(2)}. ` +\n    `The sum of outputs is ${sum_y.toFixed(2)} (vs. sum of pre-activations ${sum_z.toFixed(2)}). ` +\n    `Dropped units (mask=0) contribute 0. ` +\n    `Expected output per unit equals z_i when mask is random with keep probability p.`;\n  return {\n    y: y,\n    y_no_rescale: y_no_rescale,\n    expected_y: expected_y,\n    table: table,\n    flow: flow,\n    insight: insight\n  };\n}",
+  "outputs": [
+    {
+      "id": "y",
+      "type": "vector",
+      "label": "Output after dropout and rescaling",
+      "labels": [
+        "y1",
+        "y2",
+        "y3",
+        "y4"
+      ]
+    },
+    {
+      "id": "y_no_rescale",
+      "type": "vector",
+      "label": "Output without rescaling",
+      "labels": [
+        "y1",
+        "y2",
+        "y3",
+        "y4"
+      ]
+    },
+    {
+      "id": "expected_y",
+      "type": "vector",
+      "label": "Expected output (over random masks)",
+      "labels": [
+        "E[y1]",
+        "E[y2]",
+        "E[y3]",
+        "E[y4]"
+      ]
+    },
+    {
+      "id": "table",
+      "type": "table",
+      "label": "Intermediate quantities per unit",
+      "columns": [
+        "Unit",
+        "z_i",
+        "m_i",
+        "z_i * m_i",
+        "y_i = (z_i * m_i)/p"
+      ]
+    },
+    {
+      "id": "flow",
+      "type": "flow",
+      "label": "Dropout pipeline"
+    }
+  ],
+  "steps": [
+    "\\text{Pre-activation: } z_i = (\\mathbf{W}\\mathbf{h} + \\mathbf{b})_i",
+    "\\text{Dropout mask: } m_i \\sim \\text{Bernoulli}(p), \\quad p = {{p}}",
+    "\\text{Masked pre-activation: } z_i \\cdot m_i",
+    "\\text{Rescaled output: } y_i = \\frac{z_i \\cdot m_i}{p}",
+    "\\text{Example: } y_1 = \\frac{z_1 \\cdot m_1}{p} = {{y[0]}}"
+  ],
+  "explorations": [
+    {
+      "title": "Effect of keep probability on rescaling",
+      "predict": "If we decrease p (more dropout), what happens to the rescale factor 1/p and the output for kept units?",
+      "set": {
+        "p": 0.5,
+        "mask": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "z": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "observe": "With p=0.5, the rescale factor is 2. Each output y_i = z_i * 2 = 2. The sum of outputs is 8, while the sum of pre-activations is 4.",
+      "why": "The rescale factor 1/p compensates for the fact that only a fraction p of units are kept on average. Without rescaling, the expected sum of outputs would be p times the sum of pre-activations.",
+      "expect": "approx(out.y[0], inp.z[0] / inp.p, 1e-6)"
+    },
+    {
+      "title": "Dropped units contribute zero",
+      "predict": "If a unit is dropped (mask=0), what is its output?",
+      "set": {
+        "p": 0.8,
+        "mask": [
+          0,
+          1,
+          1,
+          1
+        ],
+        "z": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "observe": "Unit 1 has mask=0, so its output y_1 = 0. Units 2-4 have mask=1, so their outputs are z_i / p = 1/0.8 = 1.25.",
+      "why": "The mask multiplies the pre-activation, so a dropped unit's contribution is zero. The rescaling only applies to kept units.",
+      "expect": "approx(out.y[0], 0, 1e-6)"
+    }
+  ],
+  "self_tests": [
+    {
+      "name": "Rescaling maintains expected value",
+      "set": {
+        "p": 0.5,
+        "mask": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "z": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "expect": "approx(out.y[0], inp.z[0] / inp.p, 1e-6)"
+    },
+    {
+      "name": "Dropped unit gives zero output",
+      "set": {
+        "p": 0.8,
+        "mask": [
+          0,
+          1,
+          1,
+          1
+        ],
+        "z": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "expect": "approx(out.y[0], 0, 1e-6)"
+    },
+    {
+      "name": "No dropout (p=1) leaves output unchanged",
+      "set": {
+        "p": 1,
+        "mask": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "z": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "expect": "approx(out.y[0], inp.z[0], 1e-6) && approx(out.y[1], inp.z[1], 1e-6) && approx(out.y[2], inp.z[2], 1e-6) && approx(out.y[3], inp.z[3], 1e-6)"
+    }
+  ],
+  "limitation": "This toy model assumes a fixed mask and does not simulate the randomness of dropout during training. It also ignores that dropout is typically applied to hidden layers and that the rescaling is an approximation to maintain expected output.",
+  "misconception": "Dropout does not simply remove units; it also rescales the remaining outputs so that the expected sum of activations remains the same as without dropout.",
+  "claims": [
+    {
+      "text": "Dropout randomly drops units with probability 1-p during training.",
+      "source": "paper"
+    },
+    {
+      "text": "At test time, weights are scaled by p (or equivalently, activations are scaled by 1/p during training).",
+      "source": "paper"
+    },
+    {
+      "text": "In our toy setup, we apply dropout to a fixed pre-activation vector and rescale by 1/p to illustrate the effect.",
+      "source": "ours"
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome": "Explain how dropout randomly drops units and why outputs are rescaled.",
+      "covered_by": [
+        "control:p",
+        "control:mask",
+        "output:y",
+        "output:table",
+        "exploration:1",
+        "exploration:2"
+      ]
+    },
+    {
+      "outcome": "Compute the output of a layer with dropout and rescaling given pre-activations, mask, and keep probability.",
+      "covered_by": [
+        "control:z",
+        "control:mask",
+        "control:p",
+        "output:y",
+        "output:table"
+      ]
+    },
+    {
+      "outcome": "Understand that the expected output of a unit under dropout equals its pre-activation when rescaling is applied.",
+      "covered_by": [
+        "output:expected_y",
+        "exploration:1"
+      ]
+    }
+  ]
+}
