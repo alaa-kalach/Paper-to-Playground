@@ -14,6 +14,10 @@ CONTENT
 - limitation: specific to this mechanism and scientifically correct, not generic.
 - Exploration "why": explain the mechanism in 1-2 sentences using the equation, not just the result.
 - Each exploration's "set" must itself produce the effect it teaches (don't tell the learner to try something else instead).
+- Neither exploration's "set" may equal the defaults; change at least one control value.
+- When an assert compares with base, change ONLY the control whose effect you claim; keep all other controls at their defaults.
+- A self_test or exploration whose name mentions a setting (e.g. "without scaling", "high T") must set that control explicitly in "set".
+- Before writing any threshold in an assert, work the number out from your own formula for the exact "set" values, and choose "set" values so the result is far from the threshold (a clear margin), not borderline.
 - Defaults must be a generic, uneven starting state (not a special case like all-equal or certain), so every exploration visibly changes the page.
 - Plain-text fields (hook, claims, observe, why, limitation, misconception, insight) must not contain LaTeX; write math with Unicode, e.g. H = −Σ pᵢ log₂ pᵢ.
 
