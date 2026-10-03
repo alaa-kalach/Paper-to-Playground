@@ -2,7 +2,7 @@ import json, os, sys, time, requests
 
 case_path, model = sys.argv[1], sys.argv[2]
 case = json.load(open(case_path, encoding="utf-8"))
-system = open("prompts/system.txt", encoding="utf-8").read()
+system = open("prompts/spec_system.txt", encoding="utf-8").read()
 
 t = time.time()
 r = requests.post(
