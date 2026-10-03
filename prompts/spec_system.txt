@@ -39,7 +39,7 @@ CHECKS
 - Only assert facts that are exactly true: invariants (rows sum to 1, output = weighted sum) or known values, using approx. Softmax never gives exactly 0 or 1.
 - self_tests must check invariants or formula values (sums, bounds, limits, known cases). Never predict which item ranks highest in your example.
 - Use ONE form of the equation consistently in compute, steps, explorations and tests. If your form differs from the paper's (e.g. normalized vs. unnormalized), state it in the caption and test against your own form only.
-- Iterative calculations must run until convergence (e.g. change < 1e-12 or up to 1000 iterations) before any test on the converged result; test tolerances must be looser than the stopping criterion.
+- Iterative calculations must run until convergence before any test on the converged result; test tolerances must be looser than the stopping criterion.
 - Never assert specific numeric values you have not derived exactly from the formula; prefer invariants (sums, bounds, fixed-point equations, symmetry).
 - Assertions must check scalar or vector outputs (or matrix entries), never table cells.
 - Never compare against rounded constants (0.632, 0.993). Write the exact expression, e.g. approx(out.V, inp.V0*(1-Math.exp(-1)), 1e-6).
