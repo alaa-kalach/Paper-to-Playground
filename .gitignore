@@ -1,7 +1,5 @@
-__pycache__/
-*.pyc
 .venv/
-venv/
+__pycache__/
+out*/
+*.pyc
 .env
-.vscode/
-.ipynb_checkpoints/

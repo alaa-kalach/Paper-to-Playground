@@ -1,0 +1,306 @@
+{
+ "title": "Scaled dot-product attention",
+ "paper": {
+  "title": "Attention Is All You Need",
+  "authors": "Vaswani et al.",
+  "year": 2017,
+  "url": "https://arxiv.org/html/1706.03762v7",
+  "section": "Section 3.2.1",
+  "equation": "Eq. (1)"
+ },
+ "hook": "Attention lets each query decide how much to read from every value, based on how well it matches each key. It is the core operation of the Transformer.",
+ "symbols": [
+  {
+   "symbol": "Q",
+   "meaning": "queries, one row per position asking for information",
+   "source": "paper"
+  },
+  {
+   "symbol": "K",
+   "meaning": "keys, one row per position being matched",
+   "source": "paper"
+  },
+  {
+   "symbol": "V",
+   "meaning": "values, the content that gets mixed",
+   "source": "paper"
+  },
+  {
+   "symbol": "d_k",
+   "meaning": "dimension of queries and keys",
+   "source": "paper"
+  }
+ ],
+ "equation": {
+  "latex": "\\mathrm{Attention}(Q,K,V) = \\mathrm{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V",
+  "source": "paper",
+  "caption": "Softmax is applied to each row."
+ },
+ "controls": [
+  {
+   "id": "Q",
+   "type": "matrix",
+   "label": "Queries Q (2 x d_k)",
+   "rows": 2,
+   "cols": 4,
+   "min": -3,
+   "max": 3,
+   "step": 0.5,
+   "default": [
+    [
+     1,
+     0,
+     1,
+     0
+    ],
+    [
+     0,
+     2,
+     0,
+     2
+    ]
+   ]
+  },
+  {
+   "id": "K",
+   "type": "matrix",
+   "label": "Keys K (3 x d_k)",
+   "rows": 3,
+   "cols": 4,
+   "min": -3,
+   "max": 3,
+   "step": 0.5,
+   "default": [
+    [
+     1,
+     0,
+     1,
+     0
+    ],
+    [
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "V",
+   "type": "matrix",
+   "label": "Values V (3 x 2)",
+   "rows": 3,
+   "cols": 2,
+   "min": -3,
+   "max": 3,
+   "step": 0.5,
+   "default": [
+    [
+     1,
+     0
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "scale",
+   "type": "toggle",
+   "label": "Divide scores by sqrt(d_k)",
+   "default": true,
+   "symbol": "\\sqrt{d_k}"
+  }
+ ],
+ "compute": "function compute(inputs){\n  var Q=inputs.Q,K=inputs.K,V=inputs.V,d=Q[0].length,s=inputs.scale?Math.sqrt(d):1;\n  var S=Q.map(function(q){return K.map(function(k){var t=0;for(var i=0;i<d;i++)t+=q[i]*k[i];return t/s;});});\n  var W=S.map(function(r){var m=Math.max.apply(null,r);var e=r.map(function(x){return Math.exp(x-m);});var z=e.reduce(function(a,b){return a+b;},0);return e.map(function(x){return x/z;});});\n  var O=W.map(function(w){return V[0].map(function(_,j){var t=0;for(var i=0;i<V.length;i++)t+=w[i]*V[i][j];return t;});});\n  var rs=W.map(function(w){return w.reduce(function(a,b){return a+b;},0);});\n  var mx=Math.max.apply(null,W[0]);\n  return {S:S,W:W,O:O,rowsum:rs,w00:W[0][0],insight:'Query 1 puts '+(100*mx).toFixed(0)+'% of its attention on its best-matching key.'};\n}",
+ "outputs": [
+  {
+   "id": "S",
+   "type": "matrix",
+   "label": "Scores QK^T / sqrt(d_k)",
+   "row_labels": [
+    "q1",
+    "q2"
+   ],
+   "col_labels": [
+    "k1",
+    "k2",
+    "k3"
+   ]
+  },
+  {
+   "id": "W",
+   "type": "matrix",
+   "label": "Attention weights softmax(scores)",
+   "row_labels": [
+    "q1",
+    "q2"
+   ],
+   "col_labels": [
+    "k1",
+    "k2",
+    "k3"
+   ]
+  },
+  {
+   "id": "O",
+   "type": "matrix",
+   "label": "Output W V",
+   "row_labels": [
+    "q1",
+    "q2"
+   ]
+  },
+  {
+   "id": "rowsum",
+   "type": "vector",
+   "label": "Row sums of weights",
+   "labels": [
+    "q1",
+    "q2"
+   ]
+  },
+  {
+   "id": "w00",
+   "type": "scalar",
+   "label": "Weight of q1 on k1"
+  }
+ ],
+ "steps": [
+  "S = QK^T/\\sqrt{d_k}",
+  "W_{11} = {{w00}}",
+  "O = WV"
+ ],
+ "explorations": [
+  {
+   "title": "Equal scores spread attention evenly",
+   "predict": "If all keys are identical, how is attention split?",
+   "set": {
+    "K": [
+     [
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1
+     ]
+    ]
+   },
+   "observe": "Every weight becomes 1/3 and the output is the plain average of V.",
+   "why": "Equal scores give equal exponentials, so softmax returns a uniform distribution.",
+   "assert": "approx(out.W[0][0], 1/3) && approx(out.O[0][0], (1+0+1)/3)"
+  },
+  {
+   "title": "A dominant score takes over",
+   "predict": "What happens when one key matches the query much better?",
+   "set": {
+    "Q": [
+     [
+      3,
+      3,
+      3,
+      3
+     ],
+     [
+      0,
+      2,
+      0,
+      2
+     ]
+    ],
+    "K": [
+     [
+      3,
+      3,
+      3,
+      3
+     ],
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      -1,
+      -1,
+      -1,
+      -1
+     ]
+    ]
+   },
+   "observe": "q1 puts nearly all weight on k1, so its output copies V row 1.",
+   "why": "Softmax exaggerates gaps between scores exponentially.",
+   "assert": "out.W[0][0] > 0.99"
+  }
+ ],
+ "self_tests": [
+  {
+   "name": "rows of weights sum to 1",
+   "set": {},
+   "assert": "all(out.rowsum, function(x){return approx(x,1);})"
+  },
+  {
+   "name": "output equals weighted sum of V",
+   "set": {},
+   "assert": "approx(out.O[0][1], out.W[0][0]*0 + out.W[0][1]*1 + out.W[0][2]*1)"
+  }
+ ],
+ "limitation": "Real Transformers learn Q, K, V from data and use many heads; here they are hand-set toy matrices.",
+ "misconception": "Attention weights are not probabilities that a word is 'important' overall; they are per-query mixing coefficients.",
+ "claims": [
+  {
+   "text": "Scores are divided by sqrt(d_k) to keep softmax out of regions with tiny gradients for large d_k.",
+   "source": "paper"
+  },
+  {
+   "text": "The specific matrices shown are invented examples.",
+   "source": "ours"
+  }
+ ],
+ "outcomes": [
+  {
+   "outcome": "Compute scores, softmax weights and output",
+   "covered_by": [
+    "output:S",
+    "output:W",
+    "output:O"
+   ]
+  },
+  {
+   "outcome": "See the effect of scaling",
+   "covered_by": [
+    "control:scale"
+   ]
+  },
+  {
+   "outcome": "Compare equal scores with a dominant score",
+   "covered_by": [
+    "exploration:1",
+    "exploration:2"
+   ]
+  }
+ ]
+}

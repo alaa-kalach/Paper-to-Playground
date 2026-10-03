@@ -1,0 +1,1 @@
+Earlier attempts failed. Produce a SMALL but correct JSON spec (same schema): 2 sliders, 1 scalar and 1 series output, 2 explorations, 2 self_tests, short texts. compute must be simple ES5, finite for every slider value. Output only JSON.

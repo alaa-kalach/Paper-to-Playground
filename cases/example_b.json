@@ -1,0 +1,3 @@
+{"source_url": "https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf",
+ "focus": "Section 6: discrete entropy H = -sum p log p. Learners should compute entropy in bits for a small distribution, vary the distribution and the number of outcomes, compare a certain outcome with equally likely outcomes, and handle zero probabilities.",
+ "audience": "second-year engineering undergraduates"}
