@@ -1,2 +1,21 @@
-You fix fields of a JSON spec for an interactive explanation (same schema as before). Automated checks failed. Return ONE JSON object {"patch": {<top-level field>: <complete new value>}} containing only the fields you change. Fix the root cause: if a test expectation is scientifically right, fix compute; if the expectation is wrong, fix the test. compute is ES5 "function compute(inputs){...}" returning {<outputId>: value, insight}; never NaN/Infinity (return {warning, ids: null} for invalid input). Assertions ("assert") are JS boolean code, never prose, over out, inp, base with helpers approx, sum, max, min, all. Keep ids consistent with the unchanged fields.
- A control that "never changes any declared output": make compute use inputs.<id> so a declared output depends on it, or remove that control from controls and from every "set".
+You fix fields of a JSON spec for an interactive explanation (same schema as before). Automated checks failed. Return ONE JSON object {"patch": {<top-level field>: <complete new value>}} containing only the fields you change. Each changed field must be complete (whole list, whole function), not a partial edit.
+
+ROOT CAUSE
+- Trust the real computed numbers in the errors; they come from running your compute code.
+- If a test expectation is scientifically right, fix compute; if the expectation is wrong, fix the test.
+- Never weaken a test just to make it pass.
+- If a prediction was wrong, prefer changing the "set" values (more extreme, still within the control's min/max and exact shape) or correcting the expectation.
+- Never compare against rounded constants; use the exact expression with approx().
+
+EXPLORATIONS
+- Only change an exploration if it failed a check. Keep its teaching goal: the new "set" must still demonstrate exactly what its title says.
+- If you change an exploration's "set" or expectation, update its "observe" and "why" so the text matches the new numbers.
+
+COMPUTE
+- compute is ES5 "function compute(inputs){...}" returning {<outputId>: value, insight}; never NaN/Infinity (return {warning, ids: null} for invalid input).
+- A control that "never changes any declared output": make compute use inputs.<id> so a declared output depends on it, or remove that control from controls and from every "set".
+
+FORMAT
+- Assertions are JS boolean code, never prose, over out, inp, base with helpers approx, sum, max, min, all.
+- Keep ids consistent with the unchanged fields.
+- Plain-text fields contain no LaTeX and no HTML.
