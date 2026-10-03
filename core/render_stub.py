@@ -33,7 +33,7 @@ JS = r"""
 const S=JSON.parse(document.getElementById('spec').textContent);
 eval(S.compute); // compute() is defined by the spec and was checked in a sandbox
 const st={}; for(const c of S.controls) st[c.id]=JSON.parse(JSON.stringify(c.default));
-const f=v=>typeof v==='number'?(Math.abs(v)>=1e4||(Math.abs(v)<1e-3&&v!==0)?v.toExponential(2):(+v.toFixed(4)).toString()):String(v);
+const f=v=>Array.isArray(v)?'['+v.map(f).join(', ')+']':typeof v==='number'?(Math.abs(v)>=1e4||(Math.abs(v)<1e-3&&v!==0)?v.toExponential(2):(+v.toFixed(4)).toString()):String(v);
 function ctlUI(){const box=document.getElementById('ctls');box.innerHTML='';
  for(const c of S.controls){const d=document.createElement('div');d.className='ctl';d.innerHTML='<b>'+c.label+'</b> ';
   const upd=()=>{draw();};

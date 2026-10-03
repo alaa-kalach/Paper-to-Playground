@@ -37,7 +37,7 @@ Reference examples: `specs/entropy.json`, `specs/attention.json`.
     {"id": "fl",      "type": "flow",   "label": "..."}    // value: {"nodes":[{"id","label","value"?}], "edges":[{"from","to","label"?,"value"?}]}
   ],
 
-  // LaTeX lines; {{id}} is replaced live by the current value of a scalar output or slider/toggle/select input
+  // LaTeX lines; {{id}} is replaced live by the current value of a scalar/vector output or slider/toggle/select/vector input
   "steps": ["H = -\\sum_i p_i\\log_2 p_i = {{H}}\\ \\text{bits}"],
 
   // "assert" (alias "expect") = JS boolean expressions over: out (outputs), inp (inputs), base (outputs at defaults)

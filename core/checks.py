@@ -381,6 +381,42 @@ def _declared(res, s):
     return {o["id"]: res.get(o["id"]) for o in s.get("outputs") or [] if isinstance(o, dict) and "id" in o}
 
 
+def _round(v):
+    if _isnum(v):
+        return float(f"{v:.4g}")
+    if isinstance(v, list):
+        return [_round(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _round(x) for k, x in v.items()}
+    return v
+
+
+def _explain(expr, out, inp, base):
+    """Show the values an assertion refers to, so a repair can see why it is false."""
+    parts, arrays = [], False
+    seen = set()
+    for src, name in re.findall(r"\b(out|base|inp)\.([A-Za-z_$][A-Za-z0-9_$]*)", expr) + \
+            [("out", n) for n in re.findall(r"(?<![.\w$])([A-Za-z_$][A-Za-z0-9_$]*)\b", expr) if n in (out or {})]:
+        if (src, name) in seen:
+            continue
+        seen.add((src, name))
+        d = {"out": out, "base": base, "inp": inp}[src] or {}
+        if name in d:
+            v = d[name]
+            depth = 0
+            x = v
+            while isinstance(x, list) and x:
+                depth += 1; x = x[0]
+            for m in re.finditer(r"\b" + re.escape(name) + r"((?:\[[^\]]*\])*)", expr):
+                if depth > m.group(1).count("["):
+                    arrays = True  # compared while still an array
+            parts.append(f"{src}.{name}={json.dumps(_round(v))[:140]}")
+    msg = "; ".join(parts[:5]) or "(no referenced values found)"
+    if arrays and re.search(r"[<>]", expr):
+        msg += ". NOTE: '<'/'>' on arrays compares them as strings; index down to numbers, e.g. out.W[0][0] < base.W[0][0]"
+    return msg
+
+
 # ---------------------------------------------------------------------------
 # Checks 2-8 (need JS)
 # ---------------------------------------------------------------------------
@@ -533,8 +569,7 @@ class CheckRun:
         if err:
             return False, f"{label}: expect '{expr}' error: {err}"
         if not ok:
-            nums = {k: v for k, v in out.items() if _isnum(v)}
-            return False, f"{label}: expect '{expr}' is false (scalar outputs: {json.dumps(nums)[:160]})"
+            return False, f"{label}: assert '{expr}' is false; actual values: {_explain(expr, out, inp, self.base)}"
         return True, None
 
     # -- check 6: self-tests
@@ -586,7 +621,7 @@ class CheckRun:
         ctl = {c.get("id"): c.get("type") for c in s.get("controls") or [] if isinstance(c, dict)}
         for st in s.get("steps") or []:
             for ph in re.findall(r"\{\{\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\}\}", st):
-                if not (outs.get(ph) == "scalar" or ctl.get(ph) in ("slider", "toggle", "select")):
+                if not (outs.get(ph) in ("scalar", "vector") or ctl.get(ph) in ("slider", "toggle", "select", "vector")):
                     self.add(F("c8_equation", f"step placeholder {{{{{ph}}}}} is not a scalar output or slider/toggle/select", ["steps"], "minor"))
 
     # -- check 2: outcomes from focus covered
