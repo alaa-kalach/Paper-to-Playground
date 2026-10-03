@@ -476,7 +476,7 @@ function outputList(out){
   var seen = {}; list.forEach(function(o){ seen[o.id] = 1; });
   Object.keys(out).forEach(function(k){
     if (seen[k] || SKIP[k] || k.charAt(0) === "_") return;
-    if (S.hide_undeclared) return;
+    if (S.hide_undeclared || DECL.length) return;  /* A: outputs[] declares what is drawn */
     var t = inferType(out[k]); if (t && t !== "scalar") list.push({id:k, type:t, label:k});
     else if (t === "scalar") list.push({id:k, type:t, label:k, _auto:1});
   });
