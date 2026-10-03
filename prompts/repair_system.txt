@@ -9,6 +9,8 @@ ROOT CAUSE
 - For "approaches" or "becomes more/less" claims, compare to the defaults instead of an absolute threshold, e.g. max(out.p)-min(out.p) < max(base.p)-min(base.p).
 - When an assert compares with base, change ONLY the control whose effect you claim; keep all other controls at their defaults.
 - Use the real computed numbers in the errors to choose new "set" values with a clear margin from the threshold, not borderline.
+- First decide whether the failing assert is scientifically correct for its "set". Check the direction (< vs >): e.g. turning a scaling factor OFF makes values larger, not smaller.
+- Correcting a wrong assert is not weakening: an assert that requires a value the mechanism can never reach (e.g. a softmax or sigmoid output of exactly 0 or 1, or a limit reached in finitely many steps) must be rewritten as a true claim with a clear margin.
 
 EXPLORATIONS
 - Only change an exploration if it failed a check. Keep its teaching goal: the new "set" must still demonstrate exactly what its title says.
