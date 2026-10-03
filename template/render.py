@@ -118,7 +118,7 @@ def _prose(t: str) -> str:
 
 # ---- plain-text labels written in ASCII math (p_i, QK^T, sqrt(d_k), log2) -> textbook HTML
 _SUB_RE = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z\u0391-\u03C9]{1,3})_(?:\{([^{}]{1,12})\}|([A-Za-z0-9]{1,4}|[+\-]))(?![A-Za-z0-9_])")
-_SUP_RE = re.compile(r"(?<=[A-Za-z0-9)\]>])\^(?:\{([^{}]{1,12})\}|(-?[A-Za-z0-9]{1,3}))")
+_SUP_RE = re.compile(r"(?<=[A-Za-z0-9)\]>\u0391-\u03C9])\^(?:\{([^{}]{1,20})\}|\(([^()]{1,20})\)|((?:-|&minus;)?[A-Za-z0-9\u0391-\u03C9]{1,3}))")
 _SQRT_RE = re.compile(r"\bsqrt\(([^()]{1,30})\)")
 _LOG_RE = re.compile(r"\blog(2|10)\b")
 _MINUS_RE = re.compile(r"(^|[\s(=])-(?=[^\s\-.,;:])")
@@ -134,6 +134,7 @@ def _typeset(t: str) -> str:
     t = _LOG_RE.sub(r"log<sub>\1</sub>", t)
     t = re.sub(r"(?<=[0-9)])\s?\*\s?(?=[0-9(])", "&times;", t)
     t = _MINUS_RE.sub(lambda m: m.group(1) + "&minus;", t)
+    t = re.sub(r"(?<=[A-Za-z0-9)\]\u0391-\u03C9]) - (?=[A-Za-z0-9(\u0391-\u03C9])", " &minus; ", t)
 
     def _sub(m):
         base, sub = m.group(1), (m.group(2) or m.group(3))
@@ -142,7 +143,7 @@ def _typeset(t: str) -> str:
         return _v(base) + "<sub>" + ("".join(_v(c) for c in sub) if len(sub) == 1 else sub) + "</sub>"
 
     t = _SUB_RE.sub(_sub, t)
-    t = _SUP_RE.sub(lambda m: "<sup>" + (m.group(1) or m.group(2)).replace("-", "&minus;") + "</sup>", t)
+    t = _SUP_RE.sub(lambda m: "<sup>" + re.sub(r"^-", "&minus;", m.group(1) or m.group(2) or m.group(3)) + "</sup>", t)
     return t
 
 
@@ -313,6 +314,7 @@ def build_view(spec: dict) -> tuple[dict, list[str]]:
             view["symbols"].append({
                 "latex_html": latex_to_mathml(sy["latex"], w, where=f"symbols[{i}]"),
                 "meaning_html": text_html(sy.get("meaning", ""), w, f"symbols[{i}]"),
+                "source": _src(sy.get("source")) if sy.get("source") else None,
             })
 
     eq = spec.get("equation")
@@ -395,6 +397,38 @@ def build_view(spec: dict) -> tuple[dict, list[str]]:
         for i, c in enumerate(_as_list(spec.get("claims"))) if isinstance(c, dict) and c.get("text")
     ]
     view["self_tests"] = [t for t in _as_list(spec.get("self_tests")) if isinstance(t, dict) and t.get("expect")]
+
+    # ---- optional enrichments (all free if the spec already has them)
+    ctl_names = {c["id"]: c.get("label") or c["id"] for c in view["controls"]}
+    out_names = {o["id"]: o.get("label") or o["id"] for o in view["outputs"]}
+
+    def _via(ref):
+        kind, _, rid = str(ref).partition(":")
+        if kind == "control" and rid in ctl_names:
+            return "the control " + ctl_names[rid]
+        if kind == "output" and rid in out_names:
+            return out_names[rid]
+        if kind == "exploration" and rid.isdigit():
+            return "Exercise " + rid
+        return None
+
+    view["outcomes"] = []
+    for i, oc in enumerate(_as_list(spec.get("outcomes"))):
+        text = oc.get("outcome") if isinstance(oc, dict) else oc
+        if not text:
+            continue
+        via = [v for v in (_via(x) for x in _as_list(oc.get("covered_by") if isinstance(oc, dict) else [])) if v]
+        view["outcomes"].append({"html": text_html(text, w, f"outcomes[{i}]"),
+                                 "via_html": label_html(", ".join(dict.fromkeys(via)), w) if via else ""})
+    view["context_html"] = text_html(spec.get("context") or spec.get("background"), w, "context")
+    view["intuition_html"] = text_html(spec.get("intuition"), w, "intuition")
+    tk = spec.get("takeaways") or spec.get("key_takeaways")
+    view["takeaways"] = [text_html(x, w, "takeaways") for x in (_as_list(tk) if not isinstance(tk, str) else [tk]) if x]
+    ver = spec.get("_verification") if isinstance(spec.get("_verification"), dict) else {}
+    ran = len(_as_list(ver.get("self_tests"))) + len(_as_list(ver.get("explorations"))) + int(ver.get("edge_runs") or 0)
+    if ver.get("summary") and ran > 0:  # never show an empty "0/0 checks" line
+        view["verification"] = {"summary": str(ver["summary"])[:300], "passed": bool(ver.get("passed")),
+                                "open_issues": [str(x)[:140] for x in _as_list(ver.get("open_issues"))][:3]}
     return view, w
 
 
